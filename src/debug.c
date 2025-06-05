@@ -45,7 +45,15 @@ char* token_name[256] = {
     [TK_MOD] = "TK_MOD",
     [TK_INC] = "TK_INC",
     [TK_DEC] = "TK_DEC",
-    [TK_BRAK] = "TK_BRAK",   
+    [TK_LEFT_PAREN] = "TK_LEFT_PAREN",
+    [TK_RIGHT_PAREN] = "TK_RIGHT_PAREN",
+    [TK_LEFT_BRACE] = "TK_LEFT_BRACE",
+    [TK_RIGHT_BRACE] = "TK_RIGHT_BRACE",
+    [TK_LEFT_BRACKET] = "TK_LEFT_BRACKET",
+    [TK_RIGHT_BRACKET] = "TK_RIGHT_BRACKET",
+    [TK_COMMA] = "TK_COMMA",
+    [TK_SEMICOLON] = "TK_SEMICOLON",
+    [TK_COLON] = "TK_COLON",
 };
 char* op_name[64] = {
     [OP_G_GLO] = "OP_G_GLO",

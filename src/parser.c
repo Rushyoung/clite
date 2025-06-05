@@ -12,6 +12,57 @@
 
 #define log(s) printf("At %s:%d\n%s: ", __FUNCTION__, __LINE__, #s);s
 
+ParseRule Rules[] = {
+    [TK_NUM] = {NULL,            NULL,           PREC_NONE },
+    [TK_FUN] = {NULL,            NULL,           PREC_NONE },
+    [TK_SYS] = {NULL,            NULL,           PREC_NONE },
+    [TK_GLO] = {NULL,            NULL,           PREC_NONE },
+    [TK_LOC] = {NULL,            NULL,           PREC_NONE },
+    [TK_ID] = {NULL,            NULL,           PREC_NONE },
+    [TK_STR] = {NULL,            NULL,           PREC_NONE },
+    [TK_CHAR] = {NULL,            NULL,           PREC_NONE },
+    [TK_ELSE] = {NULL,            NULL,           PREC_NONE },
+    [TK_ENUM] = {NULL,            NULL,           PREC_NONE },
+    [TK_IF] = {NULL,            NULL,           PREC_NONE },
+    [TK_INT] = {NULL,            NULL,           PREC_NONE },
+    [TK_RETURN] = {NULL,            NULL,           PREC_NONE },
+    [TK_SIZEOF] = {NULL,            NULL,           PREC_NONE },
+    [TK_WHILE] = {NULL,            NULL,           PREC_NONE },
+    [TK_VOID] = {NULL,            NULL,           PREC_NONE },
+    [TK_ASSIGN] = {NULL,            NULL,           PREC_NONE },
+    [TK_COND] = {NULL,            NULL,           PREC_NONE },
+    [TK_LOR] = {NULL,            NULL,           PREC_NONE },
+    [TK_LAN] = {NULL,            NULL,           PREC_NONE },
+    [TK_NOT] = {NULL,            NULL,           PREC_NONE },
+    [TK_OR] = {NULL,            NULL,           PREC_NONE },
+    [TK_XOR] = {NULL,            NULL,           PREC_NONE },
+    [TK_AND] = {NULL,            NULL,           PREC_NONE },
+    [TK_EQ] = {NULL,            NULL,           PREC_NONE },
+    [TK_NE] = {NULL,            NULL,           PREC_NONE },
+    [TK_LT] = {NULL,            NULL,           PREC_NONE },
+    [TK_GT] = {NULL,            NULL,           PREC_NONE },
+    [TK_LE] = {NULL,            NULL,           PREC_NONE },
+    [TK_GE] = {NULL,            NULL,           PREC_NONE },
+    [TK_SHL] = {NULL,            NULL,           PREC_NONE },
+    [TK_SHR] = {NULL,            NULL,           PREC_NONE },
+    [TK_ADD] = {NULL,            NULL,           PREC_NONE },
+    [TK_SUB] = {NULL,            NULL,           PREC_NONE },
+    [TK_MUL] = {NULL,            NULL,           PREC_NONE },
+    [TK_DIV] = {NULL,            NULL,           PREC_NONE },
+    [TK_MOD] = {NULL,            NULL,           PREC_NONE },
+    [TK_INC] = {NULL,            NULL,           PREC_NONE },
+    [TK_DEC] = {NULL,            NULL,           PREC_NONE },
+    [TK_LEFT_PAREN] = {NULL,            NULL,           PREC_NONE },
+    [TK_RIGHT_PAREN] = {NULL,            NULL,           PREC_NONE },
+    [TK_LEFT_BRACE] = {NULL,            NULL,           PREC_NONE },
+    [TK_RIGHT_BRACE] = {NULL,            NULL,           PREC_NONE },
+    [TK_LEFT_BRACKET] = {NULL,            NULL,           PREC_NONE },
+    [TK_RIGHT_BRACKET] = {NULL,            NULL,           PREC_NONE },
+    [TK_COMMA] = {NULL,            NULL,           PREC_NONE },
+    [TK_SEMICOLON] = {NULL,            NULL,           PREC_NONE },
+    [TK_COLON] = {NULL,            NULL,           PREC_NONE },
+};
+
 static int match(context_t ctx, scanner sc, TkType tk) {
     token_t current = prst(sc, ctx);
     if(current.tk == tk) {
@@ -61,200 +112,8 @@ static token_t* __identifier(context_t ctx, scanner sc, int* type) {
 }
 
 
-int parse_expr(context_t ctx, scanner sc, int level) {
-    next(sc, ctx); 
-    token_t tk = prev(sc, ctx);
-    log(DumpToken(ctx, tk));
-    int expr_type = TP_INT;
-    switch(tk.tk){
-        case TK_NUM:
-            emit(ctx, OP_IMM);
-            emit(ctx, tk.val);
-            break;
-        case TK_STR:
-            emit(ctx, OP_IMM);
-            emit(ctx, tk.val);
-            emit(ctx, OP_STR);
-            break;
-        case TK_ID: {
-            token_t* id = SymFind(ctx, tk);
-            tk = next(sc, ctx);
-            if(tk.tk == '(') {
-                tk = next(sc, ctx);
-                int arg_count = 0;
-                while(tk.tk != ')') {
-                    parse_expr(ctx, sc, TK_ASSIGN);
-                    emit(ctx, OP_PUSH);
-                    arg_count++;
-                    tk = prst(sc, ctx);
-                    if(tk.tk == ',') {
-                        tk = next(sc, ctx); // 跳过逗号
-                    } else if(tk.tk != ')') {
-                        printf("Expected ',' or ')' in function argument list");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                if(id->class == TK_FUN) {
-                    emit(ctx, OP_SAD);  // 保存地址
-                    emit(ctx, OP_IMM);
-                    emit(ctx, id->val);
-                    emit(ctx, OP_CALL);
-                    emit(ctx, arg_count);
-                } else if(id->class == TK_SYS){
-                    emit(ctx, id->val); // 系统调用
-                    emit(ctx, arg_count);
-                } else {
-                    printf("Function call to non-function identifier");
-                    exit(EXIT_FAILURE);
-                }
-                next(sc, ctx); // 跳过 ')'
-                log(DumpToken(ctx, prst(sc, ctx)));
-            } else {
-                int opcode;
-                if(id->class == TK_GLO) {
-                    opcode = OP_G_GLO;
-                } else if(id->class == TK_LOC) {
-                    opcode = OP_G_LOC;
-                } else {
-                    printf("Identifier is not variable");
-                    exit(EXIT_FAILURE);
-                }
-                emit(ctx, opcode);
-                emit(ctx, id->val);           
-            }
-            break;
-        }
-        default:
-            printf("Unexpected token in expression");
-            exit(EXIT_FAILURE);
-    }
-
-    while(tk.tk >= level){
-        switch(tk.tk) {
-            case TK_ADD:
-                emit(ctx, OP_PUSH);
-                next(sc, ctx);
-                parse_expr(ctx, sc, TK_MUL);
-                emit(ctx, OP_ADD);
-                break;
-            case TK_SUB:
-                emit(ctx, OP_PUSH);
-                next(sc, ctx);
-                parse_expr(ctx, sc, TK_MUL);
-                emit(ctx, OP_SUB);
-                break;
-            case TK_MUL:
-                emit(ctx, OP_PUSH);
-                next(sc, ctx);
-                parse_expr(ctx, sc, TK_INC);
-                emit(ctx, OP_MUL);
-                break;
-            case TK_DIV:
-                emit(ctx, OP_PUSH);
-                next(sc, ctx);
-                parse_expr(ctx, sc, TK_INC);
-                emit(ctx, OP_DIV);
-                break;
-            case TK_MOD:
-                emit(ctx, OP_PUSH);
-                next(sc, ctx);
-                parse_expr(ctx, sc, TK_INC);
-                emit(ctx, OP_MOD);
-                break;
-        }
-        tk = prst(sc, ctx);
-    }
-    return expr_type;
-}
-
-
-static void stmt_if(context_t ctx, scanner sc) {
-}
-
-static void stmt_while(context_t ctx, scanner sc) {
-}
-
-static void stmt_return(context_t ctx, scanner sc) {
-    token_t tk = next(sc, ctx);
-    if(tk.tk != ';') {
-        parse_expr(ctx, sc, TK_ASSIGN);
-    }
-    if(prst(sc, ctx).tk != ';') {
-        printf("Expected ';' after return statement");
-        exit(EXIT_FAILURE);
-    }
-    emit(ctx, OP_RET);
-}
-
-static void stmt_block(context_t ctx, scanner sc) {
-    token_t tk = next(sc, ctx);
-    while(tk.tk != '}') {
-        parse_stmt(ctx, sc);
-        tk = next(sc, ctx);
-    }
-}
-
-static void stmt_decl(context_t ctx, scanner sc) {
-    token_t tk = prst(sc, ctx);
-    int base_type = TP_INT;
-    int real_type = TP_INT;
-    switch(tk.tk){
-        case TK_CHAR:
-            base_type = TP_CHAR;
-        case TK_VOID:
-            base_type = TK_VOID;
-    }
-    while(tk.tk != ';'){
-        tk = next(sc, ctx);
-        while(tk.tk == TK_MUL) {
-            real_type += TP_PTR; // 处理指针类型
-            tk = next(sc, ctx);
-        }
-        if(tk.tk != TK_ID) {
-            printf("Expected identifier after type declaration");
-            exit(EXIT_FAILURE);
-        }/* todo: 这里需要检查是否已经定义过该标识符, 但是暂时允许重复定义
-        if(tk.val ) {
-            printf("Multiple definitions of identifier");
-            exit(EXIT_FAILURE);
-        }*/
-        token_t* id = SymFind(ctx, tk);
-        id->type = real_type;
-        id->class = TK_LOC;
-        id->val = id - ctx->sym_loc; // 计算局部变量的偏移量
-        tk = next(sc, ctx);
-        if(tk.tk == TK_ASSIGN) {
-            next(sc, ctx); // 跳过 '='
-            parse_expr(ctx, sc, TK_ASSIGN);
-        } else {
-            emit(ctx, OP_IMM); // 初始化为0
-            emit(ctx, 0);
-        }
-        emit(ctx, OP_S_LOC);  // 设置变量值
-        emit(ctx, id->val);   // 使用局部变量的偏移量
-        if(prst(sc, ctx).tk == ','){
-            continue; // 继续下一个变量声明
-        }
-        if(prst(sc, ctx).tk != ';') {
-            printf("Expected ',' or ';' after variable declaration");
-            exit(EXIT_FAILURE);
-        } else {
-            return; // 结束当前声明
-        }
-    }
-}
-
-static void stmt_expr(context_t ctx, scanner sc) {
-    parse_expr(ctx, sc, TK_ASSIGN);
-    token_t tk = prst(sc, ctx);
-    if(tk.tk != ';') {
-        printf("Expected ';' after expression statement");
-        exit(EXIT_FAILURE);
-    }
-}
-
 void parse_stmt(context_t ctx, scanner sc) {
-    token_t tk = prst(sc, ctx);
+    /*token_t tk = prst(sc, ctx);
     log(DumpToken(ctx, tk));
     switch(tk.tk) {
         case TK_IF:
@@ -278,7 +137,7 @@ void parse_stmt(context_t ctx, scanner sc) {
             stmt_expr(ctx, sc);
             log(DumpToken(ctx, prst(ctx, sc)));
             break;
-    }
+    }*/
 }
 
 void parse_global(context_t ctx, scanner sc) {
@@ -308,7 +167,6 @@ void parse_global(context_t ctx, scanner sc) {
             } else if(arg_id->class == TK_GLO || arg_id->class == TK_FUN) {
                 arg_id = SymAdd(ctx, *arg_id); // 如果是全局变量或函数，则添加到符号表
             }
-            if()
             arg_id->type = arg_type; // 设置参数类型
             arg_id->class = TK_LOC; // 设置为局部变量
             arg_id->val = arg_id - ctx->sym_loc; // 计算局部变量的偏移量
@@ -316,7 +174,7 @@ void parse_global(context_t ctx, scanner sc) {
         }
         consume(ctx, sc, ')', "Expected ')' after function arguments");
         consume(ctx, sc, '{', "Expected '{' after function declaration");
-        stmt_block(ctx, sc); // 解析函数体
+        //stmt_block(ctx, sc); // 解析函数体
         consume(ctx, sc, '}', "Expected '}' after function body");
         SymEndloc(ctx); // 结束符号表作用域
     } else {      
@@ -325,7 +183,7 @@ void parse_global(context_t ctx, scanner sc) {
         emit(ctx, OP_S_GLO); // 生成全局变量存储指令
         emit(ctx, id->val);   // 存储全局变量的偏移量
         if(match(ctx, sc, TK_ASSIGN)) { // 如果有初始化赋值
-            parse_expr(ctx, sc, TK_ASSIGN); // 解析赋值表达式
+            //parse_expr(ctx, sc, TK_ASSIGN); // 解析赋值表达式
         } else {
             emit(ctx, OP_IMM); // 初始化为0
             emit(ctx, 0);

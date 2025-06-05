@@ -23,7 +23,7 @@ context_t InitContext(){
     memset(ctx->btcode, 0, 65536 * sizeof(uint64_t));
     ctx->btcode_cur = ctx->btcode;
 
-    const char* builtin = 
+    char* builtin = 
     "char else enum if int return sizeof while void main "
     "open read close printf malloc free memset memcmp exit";
     scanner keyword = InitScanner(106, builtin);

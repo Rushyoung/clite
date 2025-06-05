@@ -14,7 +14,7 @@ int run(context_t ctx){
     uint64_t* bp = NULL;
     uint64_t* sp = NULL;
     uint64_t* pc = NULL;
-    uint64_t  ip = NULL;
+    uint64_t  ip = 0;
     uint64_t  ax = 0;
     stk = bp = sp = (uint64_t*)malloc(8192 * sizeof(uint64_t)); // allocate stack memory
     if(!stk){
@@ -75,7 +75,7 @@ int run(context_t ctx){
                 printf("call to function at %llu\n", ax);
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
                 printf("Function need return to %llu\n", *(bp - 1));
-                sp -= pc;
+                sp -= *pc;
                 pc = ctx->btcode + ax; // 跳转到函数地址
                 break;
             case OP_RET:

@@ -43,7 +43,15 @@ typedef enum {
     TK_MOD,       // 取模操作符 '%'
     TK_INC,       // 自增操作符 '++'
     TK_DEC,       // 自减操作符 '--'
-    TK_BRAK       // 方括号 '['
+    TK_LEFT_PAREN, // 左括号 '('
+    TK_RIGHT_PAREN, // 右括号 ')'
+    TK_LEFT_BRACE, // 左花括号 '{'
+    TK_RIGHT_BRACE, // 右花括号 '}'
+    TK_LEFT_BRACKET, // 左方括号 '['
+    TK_RIGHT_BRACKET, // 右方括号 ']'
+    TK_COMMA,     // 逗号 ','
+    TK_SEMICOLON, // 分号 ';'
+    TK_COLON,     // 冒号 ':'
 } TkType;
 
 typedef struct{

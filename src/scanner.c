@@ -1,5 +1,6 @@
 #include "scanner.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -197,20 +198,39 @@ static token_t advance(scanner sc, context_t ctx){
         case '%':
             tk.tk = TK_MOD; // modulo
             return tk;
+        case '?':
+            tk.tk = TK_COND; // conditional operator
+            return tk;
         case '[':
-            tk.tk = TK_BRAK;
+            tk.tk = TK_LEFT_BRACKET; // left bracket
             return tk;
-        case '~':
-        case ';':
-        case '{':
-        case '}':
-        case '(':
-        case ')':
         case ']':
-        case ',':
-        case ':':
-            tk.tk = (TkType)*sc->pre;
+            tk.tk = TK_RIGHT_BRACKET; // right bracket
             return tk;
+        case '{':
+            tk.tk = TK_LEFT_BRACE; // left brace
+            return tk;
+        case '}':
+            tk.tk = TK_RIGHT_BRACE; // right brace
+            return tk;
+        case '(':
+            tk.tk = TK_LEFT_PAREN; // left parenthesis
+            return tk;
+        case ')':
+            tk.tk = TK_RIGHT_PAREN; // right parenthesis
+            return tk;
+        case ';':
+            tk.tk = TK_SEMICOLON; // semicolon
+            return tk;
+        case ',':
+            tk.tk = TK_COMMA; // comma
+            return tk;
+        case ':':
+            tk.tk = TK_COLON; // colon
+            return tk;
+        default:
+            printf("Unknown character '%c' at line %zu\n", *sc->pre, sc->line);
+            exit(EXIT_FAILURE);
     }
     return advance(sc, ctx);
 }
