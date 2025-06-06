@@ -12,8 +12,12 @@
 
 #define log(s) printf("At %s:%d\n%s: ", __FUNCTION__, __LINE__, #s);s
 
+// 定义解析函数
+static void expr_number(ParseFunctionArgs);
+static void expr_unary(ParseFunctionArgs);
+
 ParseRule Rules[] = {
-    [TK_NUM] = {NULL,            NULL,           PREC_NONE },
+    [TK_NUM] = {expr_number,            NULL,           PREC_NONE },
     [TK_FUN] = {NULL,            NULL,           PREC_NONE },
     [TK_SYS] = {NULL,            NULL,           PREC_NONE },
     [TK_GLO] = {NULL,            NULL,           PREC_NONE },
@@ -33,7 +37,7 @@ ParseRule Rules[] = {
     [TK_COND] = {NULL,            NULL,           PREC_NONE },
     [TK_LOR] = {NULL,            NULL,           PREC_NONE },
     [TK_LAN] = {NULL,            NULL,           PREC_NONE },
-    [TK_NOT] = {NULL,            NULL,           PREC_NONE },
+    [TK_NOT] = {expr_unary,            NULL,           PREC_NONE },
     [TK_OR] = {NULL,            NULL,           PREC_NONE },
     [TK_XOR] = {NULL,            NULL,           PREC_NONE },
     [TK_AND] = {NULL,            NULL,           PREC_NONE },
@@ -45,13 +49,13 @@ ParseRule Rules[] = {
     [TK_GE] = {NULL,            NULL,           PREC_NONE },
     [TK_SHL] = {NULL,            NULL,           PREC_NONE },
     [TK_SHR] = {NULL,            NULL,           PREC_NONE },
-    [TK_ADD] = {NULL,            NULL,           PREC_NONE },
-    [TK_SUB] = {NULL,            NULL,           PREC_NONE },
+    [TK_ADD] = {expr_unary,            NULL,           PREC_TERM },
+    [TK_SUB] = {expr_unary,            NULL,           PREC_TERM },
     [TK_MUL] = {NULL,            NULL,           PREC_NONE },
     [TK_DIV] = {NULL,            NULL,           PREC_NONE },
     [TK_MOD] = {NULL,            NULL,           PREC_NONE },
-    [TK_INC] = {NULL,            NULL,           PREC_NONE },
-    [TK_DEC] = {NULL,            NULL,           PREC_NONE },
+    [TK_INC] = {expr_unary,            NULL,           PREC_NONE },
+    [TK_DEC] = {expr_unary,            NULL,           PREC_NONE },
     [TK_LEFT_PAREN] = {NULL,            NULL,           PREC_NONE },
     [TK_RIGHT_PAREN] = {NULL,            NULL,           PREC_NONE },
     [TK_LEFT_BRACE] = {NULL,            NULL,           PREC_NONE },
@@ -109,6 +113,43 @@ static token_t* __identifier(context_t ctx, scanner sc, int* type) {
     }
     consume(ctx, sc, TK_ID, "Expected identifier after type declaration");
     return SymFind(ctx, prev(sc, ctx));
+}
+
+static void expr_number(ParseFunctionArgs) {
+    token_t current = prev(sc, ctx);
+    emit(ctx, OP_IMM);
+    emit(ctx, current.val);
+}
+
+static void expr_unary(ParseFunctionArgs) {
+    token_t current = prev(sc, ctx);
+    parse_expr(ctx, sc, PREC_UNARY); // 解析表达式
+    switch(current.tk) {
+        case TK_ADD:
+            // 正号，直接返回
+            break;
+        case TK_SUB:
+            emit(ctx, OP_NEGATE); // 负号，生成取反指令
+            break;
+        case TK_NOT:
+            emit(ctx, OP_NOT); // 逻辑非，生成逻辑非指令
+            break;
+        case TK_INC:
+            emit(ctx, OP_PUSH); // 前置自增，先压栈
+            emit(ctx, OP_IMM); // 前置自增
+            emit(ctx, 1); // 生成立即数1
+            emit(ctx, OP_ADD); // 执行加法
+            break;
+        case TK_DEC:
+            emit(ctx, OP_PUSH); // 前置自减，先压栈
+            emit(ctx, OP_IMM); // 前置自减
+            emit(ctx, 1); // 生成立即数1
+            emit(ctx, OP_SUB); // 执行减法
+            break;
+        default:
+            printf("Unexpected unary operator: %d", current.tk);
+            exit(EXIT_FAILURE);
+    }
 }
 
 
