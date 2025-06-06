@@ -112,6 +112,27 @@ static token_t* __identifier(context_t ctx, scanner sc, int* type) {
 }
 
 
+void parse_expr(context_t ctx, scanner sc, PrecLv level) {
+    next(sc, ctx); // 跳过当前 token
+    ParseFn prefixFn = Rules[prev(sc, ctx).tk].prefix; // 获取解析函数
+    if(prefixFn == NULL) {
+        printf("Expected expression, but something else found");
+        exit(EXIT_FAILURE);
+    }
+    int can_assign = level <= PREC_ASSIGNMENT; // 是否允许赋值
+    prefixFn(PassFunctionArgs); // 调用前缀解析函数
+    while(level < Rules[prst(sc, ctx).tk].prec) {
+        next(sc, ctx);
+        ParseFn infixFn = Rules[prev(sc, ctx).tk].infix; // 获取中缀解析函数
+        if(infixFn == NULL) {
+            return;
+        }
+        next(sc, ctx); // 跳过当前 token
+        infixFn(PassFunctionArgs); // 调用中缀解析函数
+    }
+}
+
+
 void parse_stmt(context_t ctx, scanner sc) {
     /*token_t tk = prst(sc, ctx);
     log(DumpToken(ctx, tk));

@@ -31,7 +31,7 @@ typedef struct{
     PrecLv  prec;
 } ParseRule;
 
-int  parse_expr(context_t ctx, scanner sc, int lev);
+void parse_expr(context_t ctx, scanner sc, PrecLv level);
 void parse_stmt(context_t ctx, scanner sc);
 void parse_global(context_t ctx, scanner sc);
 
