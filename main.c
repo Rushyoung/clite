@@ -52,6 +52,6 @@ int main(){
     compile(ctx, sc);
     //printf("main function in %d\n", ctx->sym[ctx->main_id].val);
     DumpBtcode(ctx);
-    //run(ctx);
+    run(ctx);
     return 0;
 }

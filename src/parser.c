@@ -17,7 +17,7 @@ static void expr_number(ParseFunctionArgs);
 static void expr_unary(ParseFunctionArgs);
 static void expr_binary(ParseFunctionArgs);
 static void expr_variable(ParseFunctionArgs);
-static void expr_call(ParseFunctionArgs);
+static void expr_string(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
@@ -29,7 +29,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_GLO]       = {NULL,            NULL,           PREC_NONE },
     [TK_LOC]       = {NULL,            NULL,           PREC_NONE },
     [TK_ID]        = {expr_variable,   NULL,           PREC_NONE },
-    [TK_STR]       = {NULL,            NULL,           PREC_NONE },
+    [TK_STR]       = {expr_string,     NULL,           PREC_NONE },
     [TK_CHAR]      = {NULL,            NULL,           PREC_NONE },
     [TK_ELSE]      = {NULL,            NULL,           PREC_NONE },
     [TK_ENUM]      = {NULL,            NULL,           PREC_NONE },
@@ -62,7 +62,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_MOD]       = {NULL,            expr_binary,    PREC_FACTOR },
     [TK_INC]       = {expr_unary,      NULL,           PREC_NONE },
     [TK_DEC]       = {expr_unary,      NULL,           PREC_NONE },
-    [TK_LE_PAREN]  = {NULL,            expr_call,      PREC_CALL },
+    [TK_LE_PAREN]  = {NULL,            NULL,           PREC_NONE },
     [TK_RI_PAREN]  = {NULL,            NULL,           PREC_NONE },
     [TK_LE_BRACE]  = {NULL,            NULL,           PREC_NONE },
     [TK_RI_BRACE]  = {NULL,            NULL,           PREC_NONE },
@@ -94,7 +94,6 @@ static void consume(context_t ctx, scanner sc, TkType tk, char* msg) {
 
 static int __ctype(context_t ctx, scanner sc) {
     token_t tk = prst(sc, ctx);
-    log(DumpToken(ctx, tk)); // 调试输出当前 token
     int type = TP_INT; // 默认类型为整型
     switch(tk.tk) {
         case TK_INT:
@@ -126,6 +125,35 @@ static void expr_number(ParseFunctionArgs) {
     token_t current = prev(sc, ctx);
     emit(ctx, OP_IMM);
     emit(ctx, current.val);
+}
+
+static void expr_string(ParseFunctionArgs) {
+    emit(ctx, OP_IMM);
+    emit(ctx, ctx->heap_cur);
+    emit(ctx, OP_STR);
+    do{
+        token_t current = prev(sc, ctx);
+        char c = 0;
+        for(int i = 0; i < current.len; i++) {
+            c = current.name[i];
+            if(c == '\\') { // 处理转义字符
+                i++;
+                switch(current.name[i]) {
+                    case 'n': c = '\n'; break;
+                    case 't': c = '\t'; break;
+                    case 'r': c = '\r'; break;
+                    case '\\': c = '\\'; break;
+                    case '\'': c = '\''; break;
+                    case '\"': c = '\"'; break;
+                    default: c = current.name[i]; break; // 其他字符直接使用
+                }
+            }
+            ctx->heap[ctx->heap_cur] = c;
+            ctx->heap_cur++;
+        }
+    }while(match(ctx, sc, TK_STR));
+    ctx->heap[ctx->heap_cur] = '\0';
+    ctx->heap_cur++;
 }
 
 static void expr_unary(ParseFunctionArgs) {
@@ -200,9 +228,36 @@ static void expr_binary(ParseFunctionArgs) {
 static void expr_variable(ParseFunctionArgs) {
     token_t tk = prev(sc, ctx);     // 获取当前标识符
     token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
-    if(id == NULL) {
-        printf("Undefined variable '%.*s'", tk.name, tk.len);
+    if(id->class == 0){
+        printf("Identifier not declared before use");
         exit(EXIT_FAILURE);
+    }
+    if(match(ctx, sc, TK_LE_PAREN)){// 函数调用，不能用查询表，因为无法区分built-in函数和用户定义函数
+        if(id->class == TK_FUN) {
+            emit(ctx, OP_SAD);   // 自定义函数调用，需要保存当前地址
+            emit(ctx, OP_IMM);
+            emit(ctx, id->val);  // 函数地址
+        }
+        int arg_count = 0; // 函数参数计数
+        if(!match(ctx, sc, TK_RI_PAREN)) { // 如果不是空参数列表
+            do{
+                arg_count++;
+                parse_expr(ctx, sc, PREC_ASSIGNMENT);
+                emit(ctx, OP_PUSH);
+            } while(match(ctx, sc, TK_COMMA)); // 处理多个参数
+            consume(ctx, sc, TK_RI_PAREN, "Expected ')' after function arguments"); // 确保以右括号结尾
+        }
+        if(id->class == TK_FUN) {
+            emit(ctx, OP_CALL); // 生成函数调用指令
+            emit(ctx, arg_count); // 使用参数计数
+        } else if (id->class == TK_SYS) {
+            emit(ctx, id->val); // 使用系统调用的值
+            emit(ctx, arg_count); // 使用参数计数
+        } else {
+            printf("Function call on non-function identifier");
+            exit(EXIT_FAILURE);
+        }
+        return;
     }
     int op_set_code = OP_S_GLO; // 默认操作码为全局变量存储
     int op_get_code = OP_G_GLO; // 默认操作码为全局变量获取
@@ -222,43 +277,33 @@ static void expr_variable(ParseFunctionArgs) {
     }
 }
 
-static void expr_call(ParseFunctionArgs) {
-    token_t current = prev(sc, ctx); // 获取当前函数调用的标识符
-    log(DumpToken(ctx, current)); // 调试输出当前 token
-    exit(EXIT_FAILURE); // 暂时不支持函数调用
-}
-
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
-    next(sc, ctx); // 跳过当前 token
-    ParseFn prefixFn = Rules[prev(sc, ctx).tk].prefix; // 获取解析函数
-    log(DumpToken(ctx, prev(sc, ctx))); // 调试输出当前 token
+    next(sc, ctx);
+    ParseFn prefixFn = Rules[prev(sc, ctx).tk].prefix; 
     if(prefixFn == NULL) {
         printf("Expected expression, but something else found");
         exit(EXIT_FAILURE);
     }
     int can_assign = level <= PREC_ASSIGNMENT; // 是否允许赋值
-    prefixFn(PassFunctionArgs); // 调用前缀解析函数
+    prefixFn(PassFunctionArgs);
     while(level <= Rules[prst(sc, ctx).tk].prec) {
         next(sc, ctx);
-        log(DumpToken(ctx, prev(sc, ctx)));
-        ParseFn infixFn = Rules[prev(sc, ctx).tk].infix; // 获取中缀解析函数
+        ParseFn infixFn = Rules[prev(sc, ctx).tk].infix;
         if(infixFn == NULL) {
             return;
         }
-        infixFn(PassFunctionArgs); // 调用中缀解析函数
+        infixFn(PassFunctionArgs);
     }
 }
 
 
 static void stmt_expr(ParseFunctionArgs) {
     parse_expr(PassFunctionArgs); // 解析表达式
-    log(DumpToken(ctx, prst(sc, ctx))); // 调试输出当前 token
     consume(ctx, sc, TK_SEMICOLON, "Expected ';' after expression statement"); // 确保以分号结尾
 }
 
 static void stmt_block(ParseFunctionArgs) {
-    log(DumpToken(ctx, prst(sc, ctx))); // 调试输出当前 token
-    while(!match(ctx, sc, '}')) { // 解析代码块中的语句
+    while(!match(ctx, sc, TK_RI_BRACE)) { // 解析代码块中的语句
         parse_stmt(ctx, sc);
     }
 }
@@ -277,6 +322,7 @@ void parse_stmt(context_t ctx, scanner sc) {
     } else {
         stmt_expr(ctx, sc, 1); // 解析表达式语句
     }
+    printf("end of statement\n");
 }
 
 void parse_global(context_t ctx, scanner sc) {
@@ -289,7 +335,7 @@ void parse_global(context_t ctx, scanner sc) {
         exit(EXIT_FAILURE);
     }
     id->type = real_type; // 设置变量类型
-    if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
+    if(match(ctx, sc, TK_LE_PAREN)){    // 函数r声明
         printf("Function declaration found\n");
         id->class = TK_FUN; // 设置为函数
         id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
@@ -312,11 +358,9 @@ void parse_global(context_t ctx, scanner sc) {
             arg_id->val = arg_id - ctx->sym_loc; // 计算局部变量的偏移量
             arg_count++;
         }
-        log(DumpToken(ctx, prst(sc, ctx))); // 调试输出当前 token
         consume(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
-        stmt_block(ctx, sc, 1); // 解析函数体
-        consume(ctx, sc, TK_RI_BRACE, "Expected '}' after function body");
-        SymEndloc(ctx); // 结束符号表作用域
+        stmt_block(ctx, sc, 1);
+        SymEndloc(ctx); 
     } else {      
         id->class = TK_GLO; // 设置为全局变量
         id->val = ctx->btcode_cur - ctx->btcode; // 全局变量地址为当前字节码位置

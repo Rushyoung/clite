@@ -96,7 +96,7 @@ static token_t advance(scanner sc, context_t ctx){
             sc->cur++;              // Skip over the closing quote
             if(*sc->pre == '"'){
                 tk.tk = TK_STR;     // string token
-                tk.len = sc->cur - sc->pre - 1; // exclude the quotes
+                tk.len = sc->cur - sc->pre - 2; // exclude the quotes
             } else {
                 tk.val = *tk.name; // character token
                 tk.tk = TK_NUM; // character token
