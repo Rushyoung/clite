@@ -4,6 +4,7 @@
 for /f "delims=#" %%i in ('prompt #$E#^&echo on^&for %%a in ^(1^) do rem') do set esck=%%i
 set "e=%esck%[38;5;196m"
 set "g=%esck%[38;5;46m"
+set "y=%esck%[38;5;226m"
 set "R=%esck%[m"
 
 gcc --version >nul 2>&1
@@ -15,6 +16,7 @@ if errorlevel 1 (
 set "CFLAGS=-Wall -Wextra -Wno-int-conversion -Wno-switch -std=c11 -O2"
 
 if not exist main.c (
+    echo [%y%Info%R%]: main.c not found, checking parent directory...
     cd ..
 )
 
