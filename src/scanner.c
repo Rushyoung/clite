@@ -93,7 +93,7 @@ static token_t advance(scanner sc, context_t ctx){
             while(*sc->cur && *sc->cur != *sc->pre){
                 sc->cur++;
             }
-            sc->cur++;              // lost last que
+            sc->cur++;              // Skip over the closing quote
             if(*sc->pre == '"'){
                 tk.tk = TK_STR;     // string token
                 tk.len = sc->cur - sc->pre - 1; // exclude the quotes
@@ -185,22 +185,22 @@ static token_t advance(scanner sc, context_t ctx){
             tk.tk = TK_COND; // conditional operator
             return tk;
         case '[':
-            tk.tk = TK_LEFT_BRCKT; // left BRCKT
+            tk.tk = TK_LE_BRCKT; // left BRCKT
             return tk;
         case ']':
-            tk.tk = TK_RIGHT_BRCKT; // right BRCKT
+            tk.tk = TK_RI_BRCKT; // right BRCKT
             return tk;
         case '{':
-            tk.tk = TK_LEFT_BRACE; // left brace
+            tk.tk = TK_LE_BRACE; // left brace
             return tk;
         case '}':
-            tk.tk = TK_RIGHT_BRACE; // right brace
+            tk.tk = TK_RI_BRACE; // right brace
             return tk;
         case '(':
-            tk.tk = TK_LEFT_PAREN; // left parenthesis
+            tk.tk = TK_LE_PAREN; // left parenthesis
             return tk;
         case ')':
-            tk.tk = TK_RIGHT_PAREN; // right parenthesis
+            tk.tk = TK_RI_PAREN; // right parenthesis
             return tk;
         case ';':
             tk.tk = TK_SEMICOLON; // semicolon
