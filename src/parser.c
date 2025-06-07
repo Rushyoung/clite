@@ -17,6 +17,10 @@ static void expr_number(ParseFunctionArgs);
 static void expr_unary(ParseFunctionArgs);
 static void expr_binary(ParseFunctionArgs);
 static void expr_variable(ParseFunctionArgs);
+static void expr_call(ParseFunctionArgs);
+
+static void stmt_expr(ParseFunctionArgs);
+static void stmt_block(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -58,7 +62,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_MOD]       = {NULL,            expr_binary,    PREC_FACTOR },
     [TK_INC]       = {expr_unary,      NULL,           PREC_NONE },
     [TK_DEC]       = {expr_unary,      NULL,           PREC_NONE },
-    [TK_LE_PAREN]  = {NULL,            NULL,           PREC_NONE },
+    [TK_LE_PAREN]  = {NULL,            expr_call,      PREC_CALL },
     [TK_RI_PAREN]  = {NULL,            NULL,           PREC_NONE },
     [TK_LE_BRACE]  = {NULL,            NULL,           PREC_NONE },
     [TK_RI_BRACE]  = {NULL,            NULL,           PREC_NONE },
@@ -90,6 +94,7 @@ static void consume(context_t ctx, scanner sc, TkType tk, char* msg) {
 
 static int __ctype(context_t ctx, scanner sc) {
     token_t tk = prst(sc, ctx);
+    log(DumpToken(ctx, tk)); // 调试输出当前 token
     int type = TP_INT; // 默认类型为整型
     switch(tk.tk) {
         case TK_INT:
@@ -217,6 +222,11 @@ static void expr_variable(ParseFunctionArgs) {
     }
 }
 
+static void expr_call(ParseFunctionArgs) {
+    token_t current = prev(sc, ctx); // 获取当前函数调用的标识符
+    log(DumpToken(ctx, current)); // 调试输出当前 token
+    exit(EXIT_FAILURE); // 暂时不支持函数调用
+}
 
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx); // 跳过当前 token
@@ -240,6 +250,19 @@ void parse_expr(context_t ctx, scanner sc, PrecLv level) {
 }
 
 
+static void stmt_expr(ParseFunctionArgs) {
+    parse_expr(PassFunctionArgs); // 解析表达式
+    log(DumpToken(ctx, prst(sc, ctx))); // 调试输出当前 token
+    consume(ctx, sc, TK_SEMICOLON, "Expected ';' after expression statement"); // 确保以分号结尾
+}
+
+static void stmt_block(ParseFunctionArgs) {
+    log(DumpToken(ctx, prst(sc, ctx))); // 调试输出当前 token
+    while(!match(ctx, sc, '}')) { // 解析代码块中的语句
+        parse_stmt(ctx, sc);
+    }
+}
+
 void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         //stmt_if(ctx, sc); // 解析 if 语句
@@ -248,11 +271,11 @@ void parse_stmt(context_t ctx, scanner sc) {
     } else if(match(ctx, sc, TK_RETURN)) {
         //stmt_return(ctx, sc); // 解析 return 语句
     } else if(match(ctx, sc, '{')) {
-        //stmt_block(ctx, sc); // 解析代码块
+        stmt_block(ctx, sc, 1); // 解析代码块
     } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
         //stmt_decl(ctx, sc); // 解析变量声明
     } else {
-        //stmt_expr(ctx, sc); // 解析表达式语句
+        stmt_expr(ctx, sc, 1); // 解析表达式语句
     }
 }
 
@@ -266,14 +289,15 @@ void parse_global(context_t ctx, scanner sc) {
         exit(EXIT_FAILURE);
     }
     id->type = real_type; // 设置变量类型
-    if(match(ctx, sc, '(')){    // 函数声明
+    if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
+        printf("Function declaration found\n");
         id->class = TK_FUN; // 设置为函数
         id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
         SymSetloc(ctx);   // 开始新的符号表作用域
         int arg_count = 0; // 函数参数计数
-        while(prst(sc, ctx).tk != ')') {
+        while(!match(ctx, sc, TK_RI_PAREN)) { // 解析函数参数
             if(arg_count > 0) {
-                consume(ctx, sc, ',', "Expected ',' in function argument list");
+                consume(ctx, sc, TK_COMMA, "Expected ',' in function argument list");
             }
             int arg_type = __ctype(ctx, sc); // 解析参数类型
             token_t* arg_id = __identifier(ctx, sc, &arg_type); // 解析参数标识符
@@ -288,10 +312,10 @@ void parse_global(context_t ctx, scanner sc) {
             arg_id->val = arg_id - ctx->sym_loc; // 计算局部变量的偏移量
             arg_count++;
         }
-        consume(ctx, sc, ')', "Expected ')' after function arguments");
-        consume(ctx, sc, '{', "Expected '{' after function declaration");
-        //stmt_block(ctx, sc); // 解析函数体
-        consume(ctx, sc, '}', "Expected '}' after function body");
+        log(DumpToken(ctx, prst(sc, ctx))); // 调试输出当前 token
+        consume(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
+        stmt_block(ctx, sc, 1); // 解析函数体
+        consume(ctx, sc, TK_RI_BRACE, "Expected '}' after function body");
         SymEndloc(ctx); // 结束符号表作用域
     } else {      
         id->class = TK_GLO; // 设置为全局变量
@@ -306,7 +330,7 @@ void parse_global(context_t ctx, scanner sc) {
         }
         emit(ctx, OP_S_GLO); // 存储全局变量值
         emit(ctx, id->val);   // 使用全局变量的偏移量
-        consume(ctx, sc, ';', "Expected ';' after global variable declaration"); // 暂时不处理多个变量声明
+        consume(ctx, sc, TK_SEMICOLON, "Expected ';' after global variable declaration"); // 暂时不处理多个变量声明
     }
 }
 

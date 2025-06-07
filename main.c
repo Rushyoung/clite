@@ -49,9 +49,7 @@ int main(){
 
     scanner sc = InitScanner(file_size, file_code);
     //DumpScanner(sc);
-    //compile(ctx, sc);
-    next(sc, ctx); // advance to the first token
-    parse_expr(ctx, sc, PREC_NONE);
+    compile(ctx, sc);
     //printf("main function in %d\n", ctx->sym[ctx->main_id].val);
     DumpBtcode(ctx);
     //run(ctx);
