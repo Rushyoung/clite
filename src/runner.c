@@ -33,7 +33,7 @@ int run(context_t ctx){
         return -1;
     }
     for(ip = *pc; ip != 0; ip = *pc){
-        *pc++;
+        pc++;
         printf("%2llu OP=%2llu, ax = %d\n", pc - ctx->btcode - 1, ip, ax);
         switch(ip){
             case OP_G_GLO:

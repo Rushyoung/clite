@@ -6,13 +6,13 @@ set "e=%esck%[38;5;196m"
 set "g=%esck%[38;5;46m"
 set "R=%esck%[m"
 
-gcc --version >nul 2>&1
+tcc --version >nul 2>&1
 if errorlevel 1 (
-    echo [%e%Error%R%]: GCC ^(GNU Compiler Collection^) is not installed or not found in PATH.
+    echo [%e%Error%R%]: TCC ^(Tiny C Compiler^) is not installed or not found in PATH.
     exit /b 1
 )
 
-set "CFLAGS=-Wall -Wextra -Wno-int-conversion -Wno-switch -std=c11 -O2"
+set "CFLAGS=-O2"
 
 if not exist main.c (
     cd ..
@@ -27,7 +27,7 @@ md build 2> nul | del /Q build\*
 
 for %%i in (src/*.c) do (
     echo [%g%Info%R%]: Compiling %%~nxi...
-    gcc -c -o build\%%~ni.o src/%%i -Iinclude %CFLAGS%
+    tcc -c -o build\%%~ni.o src/%%i -Iinclude %CFLAGS%
     if errorlevel 1 (
         echo [%e%Error%R%]: Compilation failed for %%~nxi.
         exit /b 1
@@ -35,7 +35,7 @@ for %%i in (src/*.c) do (
 )
 
 echo [%g%Info%R%]: Compiling main.c...
-gcc -o build/clite.exe build\*.o main.c -Iinclude %CFLAGS%
+tcc -o build/clite.exe build\*.o main.c -Iinclude %CFLAGS%
 
 if errorlevel 1 (
     echo [%e%Error%R%]: Compilation failed for main.c.
