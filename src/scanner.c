@@ -89,34 +89,16 @@ static token_t advance(scanner sc, context_t ctx){
             break;
         case '\'':
         case '"':
-            tk.hash = ctx->heap_cur; // store heap position
+            tk.name = sc->cur;
             while(*sc->cur && *sc->cur != *sc->pre){
-                if(*sc->cur == '\\'){
-                    sc->cur++;
-                    if(*sc->cur == 'n'){
-                        tk.val = '\n'; // handle escape sequence
-                    } else if(*sc->cur == 't'){
-                        tk.val = '\t'; // handle tab
-                    } else if(*sc->cur == 'r'){
-                        tk.val = '\r'; // handle carriage return
-                    } 
-                } else {
-                    tk.val = *sc->cur; // handle other escape sequences
-                }
-                if(*sc->pre == '"'){
-                    ctx->heap[ctx->heap_cur] = (char)tk.val; // store string in heap
-                    ctx->heap_cur++;
-                }
                 sc->cur++;
             }
             sc->cur++;              // lost last que
             if(*sc->pre == '"'){
                 tk.tk = TK_STR;     // string token
-                tk.val = tk.hash;   // store heap position
-                ctx->heap[ctx->heap_cur] = '\0'; // null-terminate the string
-                ctx->heap_cur++;    // move heap cursor
-                tk.len = ctx->heap_cur - tk.hash; // length of string
+                tk.len = sc->cur - sc->pre - 1; // exclude the quotes
             } else {
+                tk.val = *tk.name; // character token
                 tk.tk = TK_NUM; // character token
             }
             return tk;
@@ -203,10 +185,10 @@ static token_t advance(scanner sc, context_t ctx){
             tk.tk = TK_COND; // conditional operator
             return tk;
         case '[':
-            tk.tk = TK_LEFT_BRACKET; // left bracket
+            tk.tk = TK_LEFT_BRCKT; // left BRCKT
             return tk;
         case ']':
-            tk.tk = TK_RIGHT_BRACKET; // right bracket
+            tk.tk = TK_RIGHT_BRCKT; // right BRCKT
             return tk;
         case '{':
             tk.tk = TK_LEFT_BRACE; // left brace

@@ -16,6 +16,7 @@
 static void expr_number(ParseFunctionArgs);
 static void expr_unary(ParseFunctionArgs);
 static void expr_binary(ParseFunctionArgs);
+static void expr_variable(ParseFunctionArgs);
 
 ParseRule Rules[] = {
     [TK_NUM] = {expr_number,            NULL,           PREC_NONE },
@@ -23,7 +24,7 @@ ParseRule Rules[] = {
     [TK_SYS] = {NULL,            NULL,           PREC_NONE },
     [TK_GLO] = {NULL,            NULL,           PREC_NONE },
     [TK_LOC] = {NULL,            NULL,           PREC_NONE },
-    [TK_ID] = {NULL,            NULL,           PREC_NONE },
+    [TK_ID] = {expr_variable,            NULL,           PREC_NONE },
     [TK_STR] = {NULL,            NULL,           PREC_NONE },
     [TK_CHAR] = {NULL,            NULL,           PREC_NONE },
     [TK_ELSE] = {NULL,            NULL,           PREC_NONE },
@@ -61,8 +62,8 @@ ParseRule Rules[] = {
     [TK_RIGHT_PAREN] = {NULL,            NULL,           PREC_NONE },
     [TK_LEFT_BRACE] = {NULL,            NULL,           PREC_NONE },
     [TK_RIGHT_BRACE] = {NULL,            NULL,           PREC_NONE },
-    [TK_LEFT_BRACKET] = {NULL,            NULL,           PREC_NONE },
-    [TK_RIGHT_BRACKET] = {NULL,            NULL,           PREC_NONE },
+    [TK_LEFT_BRCKT] = {NULL,            NULL,           PREC_NONE },
+    [TK_RIGHT_BRCKT] = {NULL,            NULL,           PREC_NONE },
     [TK_COMMA] = {NULL,            NULL,           PREC_NONE },
     [TK_SEMICOLON] = {NULL,            NULL,           PREC_NONE },
     [TK_COLON] = {NULL,            NULL,           PREC_NONE },
@@ -188,6 +189,31 @@ static void expr_binary(ParseFunctionArgs) {
         case TK_XOR:
             emit(ctx, OP_XOR); // 按位异或
             break;
+    }
+}
+
+static void expr_variable(ParseFunctionArgs) {
+    token_t tk = prev(sc, ctx);     // 获取当前标识符
+    token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
+    if(id == NULL) {
+        printf("Undefined variable '%.*s'", tk.name, tk.len);
+        exit(EXIT_FAILURE);
+    }
+    int op_set_code = OP_S_GLO; // 默认操作码为全局变量存储
+    int op_get_code = OP_G_GLO; // 默认操作码为全局变量获取
+    int offset = id->val; // 获取变量的偏移量
+    if(id > ctx->sym_loc) { // 如果是局部变量
+        op_set_code = OP_S_LOC; // 设置操作码为局部变量存储
+        op_get_code = OP_G_LOC; // 设置操作码为局部变量获取
+        offset = id - ctx->sym_loc; // 计算局部变量的偏移量
+    }
+    if(can_assign && match(ctx, sc, TK_ASSIGN)) {
+        parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析赋值表达式
+        emit(ctx, op_set_code); // 生成存储指令
+        emit(ctx, offset); // 使用变量的偏移量
+    } else {
+        emit(ctx, op_get_code); // 生成获取指令
+        emit(ctx, offset); // 使用变量的偏移量
     }
 }
 
