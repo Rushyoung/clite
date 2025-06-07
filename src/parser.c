@@ -15,6 +15,7 @@
 // 定义解析函数
 static void expr_number(ParseFunctionArgs);
 static void expr_unary(ParseFunctionArgs);
+static void expr_binary(ParseFunctionArgs);
 
 ParseRule Rules[] = {
     [TK_NUM] = {expr_number,            NULL,           PREC_NONE },
@@ -38,22 +39,22 @@ ParseRule Rules[] = {
     [TK_LOR] = {NULL,            NULL,           PREC_NONE },
     [TK_LAN] = {NULL,            NULL,           PREC_NONE },
     [TK_NOT] = {expr_unary,            NULL,           PREC_NONE },
-    [TK_OR] = {NULL,            NULL,           PREC_NONE },
-    [TK_XOR] = {NULL,            NULL,           PREC_NONE },
-    [TK_AND] = {NULL,            NULL,           PREC_NONE },
+    [TK_OR] = {NULL,            expr_binary,           PREC_BITWISE },
+    [TK_XOR] = {NULL,            expr_binary,           PREC_BITWISE },
+    [TK_AND] = {NULL,            expr_binary,           PREC_BITWISE },
     [TK_EQ] = {NULL,            NULL,           PREC_NONE },
     [TK_NE] = {NULL,            NULL,           PREC_NONE },
     [TK_LT] = {NULL,            NULL,           PREC_NONE },
     [TK_GT] = {NULL,            NULL,           PREC_NONE },
     [TK_LE] = {NULL,            NULL,           PREC_NONE },
     [TK_GE] = {NULL,            NULL,           PREC_NONE },
-    [TK_SHL] = {NULL,            NULL,           PREC_NONE },
-    [TK_SHR] = {NULL,            NULL,           PREC_NONE },
-    [TK_ADD] = {expr_unary,            NULL,           PREC_TERM },
-    [TK_SUB] = {expr_unary,            NULL,           PREC_TERM },
-    [TK_MUL] = {NULL,            NULL,           PREC_NONE },
-    [TK_DIV] = {NULL,            NULL,           PREC_NONE },
-    [TK_MOD] = {NULL,            NULL,           PREC_NONE },
+    [TK_SHL] = {NULL,            expr_binary,           PREC_SHIFT },
+    [TK_SHR] = {NULL,            expr_binary,           PREC_SHIFT },
+    [TK_ADD] = {expr_unary,            expr_binary,           PREC_TERM },
+    [TK_SUB] = {expr_unary,            expr_binary,           PREC_TERM },
+    [TK_MUL] = {NULL,            expr_binary,           PREC_FACTOR },
+    [TK_DIV] = {NULL,            expr_binary,           PREC_FACTOR },
+    [TK_MOD] = {NULL,            expr_binary,           PREC_FACTOR },
     [TK_INC] = {expr_unary,            NULL,           PREC_NONE },
     [TK_DEC] = {expr_unary,            NULL,           PREC_NONE },
     [TK_LEFT_PAREN] = {NULL,            NULL,           PREC_NONE },
@@ -152,23 +153,62 @@ static void expr_unary(ParseFunctionArgs) {
     }
 }
 
+static void expr_binary(ParseFunctionArgs) {
+    token_t current = prev(sc, ctx);
+    PrecLv level = Rules[current.tk].prec; // 获取当前操作符的优先级
+    parse_expr(ctx, sc, level + 1); // 解析左侧表达式
+    switch(current.tk) {
+        case TK_ADD:
+            emit(ctx, OP_ADD); // 加法
+            break;
+        case TK_SUB:
+            emit(ctx, OP_SUB); // 减法
+            break;
+        case TK_MUL:
+            emit(ctx, OP_MUL); // 乘法
+            break;
+        case TK_DIV:
+            emit(ctx, OP_DIV); // 除法
+            break;
+        case TK_MOD:
+            emit(ctx, OP_MOD); // 取模
+            break;
+        case TK_SHL:
+            emit(ctx, OP_SHL); // 左移
+            break;
+        case TK_SHR:
+            emit(ctx, OP_SHR); // 右移
+            break;
+        case TK_AND:
+            emit(ctx, OP_AND); // 按位与
+            break;
+        case TK_OR:
+            emit(ctx, OP_OR); // 按位或
+            break;
+        case TK_XOR:
+            emit(ctx, OP_XOR); // 按位异或
+            break;
+    }
+}
+
 
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx); // 跳过当前 token
     ParseFn prefixFn = Rules[prev(sc, ctx).tk].prefix; // 获取解析函数
+    log(DumpToken(ctx, prev(sc, ctx))); // 调试输出当前 token
     if(prefixFn == NULL) {
         printf("Expected expression, but something else found");
         exit(EXIT_FAILURE);
     }
     int can_assign = level <= PREC_ASSIGNMENT; // 是否允许赋值
     prefixFn(PassFunctionArgs); // 调用前缀解析函数
-    while(level < Rules[prst(sc, ctx).tk].prec) {
+    while(level <= Rules[prst(sc, ctx).tk].prec) {
         next(sc, ctx);
+        log(DumpToken(ctx, prev(sc, ctx)));
         ParseFn infixFn = Rules[prev(sc, ctx).tk].infix; // 获取中缀解析函数
         if(infixFn == NULL) {
             return;
         }
-        next(sc, ctx); // 跳过当前 token
         infixFn(PassFunctionArgs); // 调用中缀解析函数
     }
 }

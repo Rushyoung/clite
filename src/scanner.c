@@ -20,6 +20,7 @@ static token_t advance(scanner sc, context_t ctx){
         case '\n':
             sc->line++;
         case '\r':
+        case ' ':
             break;
         case '#':
             while(*sc->cur && *sc->cur != '\n'){
@@ -229,7 +230,7 @@ static token_t advance(scanner sc, context_t ctx){
             tk.tk = TK_COLON; // colon
             return tk;
         default:
-            printf("Unknown character '%c' at line %zu\n", *sc->pre, sc->line);
+            printf("Unknown character '%c'(%d) at line %zu\n", *sc->pre, *sc->pre, sc->line);
             exit(EXIT_FAILURE);
     }
     return advance(sc, ctx);

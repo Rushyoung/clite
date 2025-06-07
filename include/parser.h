@@ -12,8 +12,9 @@ typedef enum{
     PREC_EQUALITY,    // == !=
     PREC_COMPARISON,  // < > <= >=
     PREC_BITWISE,     // & | ^
+    PREC_SHIFT,       // << >>
     PREC_TERM,        // + -
-    PREC_FACTOR,      // * /
+    PREC_FACTOR,      // * / %
     PREC_UNARY,       // ! -
     PREC_INCREMENT,   // ++ --
     PREC_CALL,        // ()
