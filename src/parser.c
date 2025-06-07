@@ -241,31 +241,19 @@ void parse_expr(context_t ctx, scanner sc, PrecLv level) {
 
 
 void parse_stmt(context_t ctx, scanner sc) {
-    /*token_t tk = prst(sc, ctx);
-    log(DumpToken(ctx, tk));
-    switch(tk.tk) {
-        case TK_IF:
-            stmt_if(ctx, sc);
-            break;
-        case TK_WHILE:
-            stmt_while(ctx, sc);
-            break;
-        case TK_RETURN:
-            stmt_return(ctx, sc);
-            break;
-        case '{':
-            stmt_block(ctx, sc);
-            break;
-        case TK_INT:
-        case TK_CHAR:
-        case TK_VOID:
-            stmt_decl(ctx, sc);
-            break;
-        default:
-            stmt_expr(ctx, sc);
-            log(DumpToken(ctx, prst(ctx, sc)));
-            break;
-    }*/
+    if(match(ctx, sc, TK_IF)) {
+        //stmt_if(ctx, sc); // 解析 if 语句
+    } else if(match(ctx, sc, TK_WHILE)) {
+        //stmt_while(ctx, sc); // 解析 while 语句
+    } else if(match(ctx, sc, TK_RETURN)) {
+        //stmt_return(ctx, sc); // 解析 return 语句
+    } else if(match(ctx, sc, '{')) {
+        //stmt_block(ctx, sc); // 解析代码块
+    } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
+        //stmt_decl(ctx, sc); // 解析变量声明
+    } else {
+        //stmt_expr(ctx, sc); // 解析表达式语句
+    }
 }
 
 void parse_global(context_t ctx, scanner sc) {
