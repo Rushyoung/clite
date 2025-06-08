@@ -84,6 +84,7 @@ int run(context_t ctx){
                     free(stk);
                     return ax;
                 }
+                printf("return from function, ax = %d\n", ax);
                 pc = ctx->btcode + *(bp - 1); // 恢复返回地址
                 sp = bp - 3; // 恢复栈指针
                 bp = stk + *(bp - 2); // 恢复基指针

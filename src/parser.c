@@ -360,7 +360,10 @@ void parse_global(context_t ctx, scanner sc) {
         }
         consume(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
         stmt_block(ctx, sc, 1);
-        SymEndloc(ctx); 
+        SymEndloc(ctx);
+        emit(ctx, OP_IMM);
+        emit(ctx, 0); // 函数返回值，默认为0
+        emit(ctx, OP_RET); // 生成函数返回指令
     } else {      
         id->class = TK_GLO; // 设置为全局变量
         id->val = ctx->btcode_cur - ctx->btcode; // 全局变量地址为当前字节码位置
