@@ -188,6 +188,7 @@ static void expr_unary(ParseFunctionArgs) {
 }
 
 static void expr_binary(ParseFunctionArgs) {
+    emit(ctx, OP_PUSH);
     token_t current = prev(sc, ctx);
     PrecLv level = Rules[current.tk].prec; // 获取当前操作符的优先级
     parse_expr(ctx, sc, level + 1); // 解析左侧表达式
