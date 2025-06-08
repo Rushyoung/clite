@@ -50,7 +50,7 @@ int main(){
     scanner sc = InitScanner(file_size, file_code);
     //DumpScanner(sc);
     compile(ctx, sc);
-    //printf("main function in %d\n", ctx->sym[ctx->main_id].val);
+    printf("main function in %d\n", ctx->sym[ctx->main_id].val);
     DumpBtcode(ctx);
     run(ctx);
     return 0;

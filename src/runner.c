@@ -34,7 +34,7 @@ int run(context_t ctx){
     }
     for(ip = *pc; ip != 0; ip = *pc){
         pc++;
-        printf("%2llu OP=%2llu, ax = %d\n", pc - ctx->btcode - 1, ip, ax);
+        printf("%2llu OP=%2llu, sp = %2d, ax = %d\n", pc - ctx->btcode - 1, ip, sp - stk, ax);
         switch(ip){
             case OP_G_GLO:
                 ax = ctx->sym[*pc].val; // get global variable value
@@ -45,12 +45,12 @@ int run(context_t ctx){
                 pc++;
                 break;
             case OP_G_LOC:
-                ax = *(bp + *pc + 1);
-                sp = bp + *pc + 2;
+                ax = *(bp + *pc);
                 pc++;
                 break;
             case OP_S_LOC:
-                *(bp + *pc + 1) = ax;
+                *(bp + *pc) = ax;
+                sp = bp + *pc + 2;      // 用意不明
                 pc++;
                 break;
             case OP_IMM:
@@ -73,9 +73,9 @@ int run(context_t ctx){
             case OP_CALL:
                 // 保存当前基指针和栈指针
                 printf("call to function at %llu\n", ax);
+                printf("bp will be set to %llu\n", bp - stk);
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
                 printf("Function need return to %llu\n", *(bp - 1));
-                sp -= *pc;
                 pc = ctx->btcode + ax; // 跳转到函数地址
                 break;
             case OP_RET:
@@ -97,6 +97,7 @@ int run(context_t ctx){
                 }
                 break;
             case OP_PUSH:
+                printf("push %d to stack %d\n", ax, sp - stk);
                 *sp = ax;
                 sp++;
                 break;
@@ -172,6 +173,7 @@ int run(context_t ctx){
                 ax = ctx->heap + ax; // convert to string address
                 break;
             case OP_PRINTF:
+                printf("printf called with %d arguments\n", *pc);
                 sp -= *pc; // pop arguments
                 ax = printf(sp[0], sp[1], sp[2], sp[3], sp[4], sp[5]);
                 pc++;

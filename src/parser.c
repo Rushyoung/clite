@@ -235,8 +235,6 @@ static void expr_variable(ParseFunctionArgs) {
     if(match(ctx, sc, TK_LE_PAREN)){// 函数调用，不能用查询表，因为无法区分built-in函数和用户定义函数
         if(id->class == TK_FUN) {
             emit(ctx, OP_SAD);   // 自定义函数调用，需要保存当前地址
-            emit(ctx, OP_IMM);
-            emit(ctx, id->val);  // 函数地址
         }
         int arg_count = 0; // 函数参数计数
         if(!match(ctx, sc, TK_RI_PAREN)) { // 如果不是空参数列表
@@ -248,8 +246,10 @@ static void expr_variable(ParseFunctionArgs) {
             consume(ctx, sc, TK_RI_PAREN, "Expected ')' after function arguments"); // 确保以右括号结尾
         }
         if(id->class == TK_FUN) {
-            emit(ctx, OP_CALL); // 生成函数调用指令
-            emit(ctx, arg_count); // 使用参数计数
+            emit(ctx, OP_IMM);
+            emit(ctx, id->val);     // 函数地址
+            emit(ctx, OP_CALL);     // 生成函数调用指令
+            emit(ctx, arg_count);   // 使用参数计数
         } else if (id->class == TK_SYS) {
             emit(ctx, id->val); // 使用系统调用的值
             emit(ctx, arg_count); // 使用参数计数
@@ -260,9 +260,9 @@ static void expr_variable(ParseFunctionArgs) {
         return;
     }
     int op_set_code = OP_S_GLO; // 默认操作码为全局变量存储
-    int op_get_code = OP_G_GLO; // 默认操作码为全局变量获取
-    int offset = id->val; // 获取变量的偏移量
-    if(id > ctx->sym_loc) { // 如果是局部变量
+    int op_get_code = OP_G_GLO;
+    int offset = id->val;
+    if(id >= ctx->sym_loc) { // 如果是局部变量
         op_set_code = OP_S_LOC; // 设置操作码为局部变量存储
         op_get_code = OP_G_LOC; // 设置操作码为局部变量获取
         offset = id - ctx->sym_loc; // 计算局部变量的偏移量
@@ -335,12 +335,12 @@ void parse_global(context_t ctx, scanner sc) {
         exit(EXIT_FAILURE);
     }
     id->type = real_type; // 设置变量类型
-    if(match(ctx, sc, TK_LE_PAREN)){    // 函数r声明
+    if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
         printf("Function declaration found\n");
-        id->class = TK_FUN; // 设置为函数
+        id->class = TK_FUN;
         id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
-        SymSetloc(ctx);   // 开始新的符号表作用域
-        int arg_count = 0; // 函数参数计数
+        SymSetloc(ctx);
+        int arg_count = 0;
         while(!match(ctx, sc, TK_RI_PAREN)) { // 解析函数参数
             if(arg_count > 0) {
                 consume(ctx, sc, TK_COMMA, "Expected ',' in function argument list");
