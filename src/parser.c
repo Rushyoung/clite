@@ -362,16 +362,14 @@ void parse_global(context_t ctx, scanner sc) {
         consume(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
         stmt_block(ctx, sc, 1);
         SymEndloc(ctx);
-        emit(ctx, OP_IMM);
-        emit(ctx, 0); // 函数返回值，默认为0
-        emit(ctx, OP_RET); // 生成函数返回指令
+        emit(ctx, OP_IMM);  // 配置默认返回值
+        emit(ctx, 0);
+        emit(ctx, OP_RET);
     } else {      
-        id->class = TK_GLO; // 设置为全局变量
-        id->val = ctx->btcode_cur - ctx->btcode; // 全局变量地址为当前字节码位置
-        emit(ctx, OP_S_GLO); // 生成全局变量存储指令
-        emit(ctx, id->val);   // 存储全局变量的偏移量
-        if(match(ctx, sc, TK_ASSIGN)) { // 如果有初始化赋值
-            //parse_expr(ctx, sc, TK_ASSIGN); // 解析赋值表达式
+        id->class = TK_GLO; 
+        id->val = id - ctx->sym;
+        if(match(ctx, sc, TK_ASSIGN)) {
+            parse_expr(ctx, sc, PREC_ASSIGNMENT);
         } else {
             emit(ctx, OP_IMM); // 初始化为0
             emit(ctx, 0);
