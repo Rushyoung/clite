@@ -35,7 +35,7 @@ context_t InitContext(){
 
     next(keyword, ctx);
     ctx->sym[ctx->sym_idx - 1].tk = TK_ID;    // main function identifier
-    ctx->sym[ctx->sym_idx - 1].val = 114514;  // as the default main function value, if undefined, will be 114514
+    ctx->sym[ctx->sym_idx - 1].val = 0;
     ctx->main_id = ctx->sym_idx - 1;          // store main function index
 
     for(int ids = OP_OPEN; ids <= OP_EXIT; ids++){
@@ -68,12 +68,22 @@ void emit(context_t ctx, uint64_t op){
     ctx->btcode_cur++;
 }
 
-uint64_t peak(context_t ctx){
+uint64_t* black(context_t ctx){
     if(ctx->btcode_cur == ctx->btcode){
         perror("Bytecode buffer underflow");
         exit(EXIT_FAILURE);
     }
-    return *(ctx->btcode_cur - 1);
+    uint64_t* addr = ctx->btcode_cur;
+    ctx->btcode_cur++;
+    return addr;
+}
+
+void patch(context_t ctx, uint64_t* addr, uint64_t op){
+    if(addr < ctx->btcode || addr >= ctx->btcode_cur){
+        perror("Patch address out of bounds");
+        exit(EXIT_FAILURE);
+    }
+    *addr = op;
 }
 
 

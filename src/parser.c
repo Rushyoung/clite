@@ -350,6 +350,8 @@ void parse_global(context_t ctx, scanner sc) {
     id->type = real_type; // 设置变量类型
     if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
         printf("Function declaration found\n");
+        emit(ctx, OP_JMP);
+        uint64_t* addr = black(ctx); // 留白，函数结束地址
         id->class = TK_FUN;
         id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
         SymSetloc(ctx);
@@ -377,6 +379,7 @@ void parse_global(context_t ctx, scanner sc) {
         emit(ctx, OP_IMM);  // 配置默认返回值
         emit(ctx, 0);
         emit(ctx, OP_RET);
+        patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充函数结束地址
     } else {      
         id->class = TK_GLO; 
         id->val = id - ctx->sym;
@@ -398,4 +401,12 @@ void compile(context_t ctx, scanner sc) {
     while(!match(ctx, sc, 0)) {
         parse_global(ctx, sc);
     }
+
+    if(ctx->sym[ctx->main_id].class != TK_FUN) {
+        printf("Main function not defined");
+        exit(EXIT_FAILURE);
+    }
+
+    emit(ctx, OP_JMP);
+    emit(ctx, ctx->sym[ctx->main_id].val);
 }

@@ -23,7 +23,9 @@ context_t InitContext();
 void      FreeContext(context_t ctx);
 
 void      emit(context_t ctx, uint64_t op);
-uint64_t  peak(context_t ctx);
+uint64_t* black(context_t ctx);                              // 留白
+void      patch(context_t ctx, uint64_t* addr, uint64_t op); // 填充留白
+
 
 token_t*  SymFind(context_t ctx, token_t tk);
 token_t*  SymAdd(context_t ctx, token_t tk);
