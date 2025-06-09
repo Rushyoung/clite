@@ -21,12 +21,7 @@ int run(context_t ctx){
         fprintf(stderr, "Failed to allocate memory for stack\n");
         return -1;
     }
-    if(ctx->sym[ctx->main_id].val == 114514){ // check if main function is defined
-        fprintf(stderr, "Main function is not defined\n");
-        free(stk);
-        return -1;
-    }
-    pc = ctx->btcode + ctx->sym[ctx->main_id].val; // set program counter to main function
+    pc = ctx->btcode;
     if(!pc){
         fprintf(stderr, "Main function not found\n");
         free(stk);
@@ -58,7 +53,7 @@ int run(context_t ctx){
                 pc++;
                 break;
             case OP_JMP:
-                pc = stk + *pc;
+                pc = ctx->btcode + *pc; // 跳转到指定地址
                 break;
             case OP_SAD:
                 // 保存当前栈地址到栈顶
