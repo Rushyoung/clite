@@ -21,6 +21,7 @@ static void expr_string(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
+static void stmt_return(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -82,7 +83,7 @@ static int match(context_t ctx, scanner sc, TkType tk) {
     return 0; // 匹配失败
 }
 
-static void consume(context_t ctx, scanner sc, TkType tk, char* msg) {
+static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
     token_t current = prst(sc, ctx);
     if(current.tk != tk) {
         printf(msg);
@@ -117,7 +118,7 @@ static token_t* __identifier(context_t ctx, scanner sc, int* type) {
     while(match(ctx, sc, TK_MUL)) {
         *type += TP_PTR; // 处理指针类型
     }
-    consume(ctx, sc, TK_ID, "Expected identifier after type declaration");
+    expect(ctx, sc, TK_ID, "Expected identifier after type declaration");
     return SymFind(ctx, prev(sc, ctx));
 }
 
@@ -244,7 +245,7 @@ static void expr_variable(ParseFunctionArgs) {
                 parse_expr(ctx, sc, PREC_ASSIGNMENT);
                 emit(ctx, OP_PUSH);
             } while(match(ctx, sc, TK_COMMA)); // 处理多个参数
-            consume(ctx, sc, TK_RI_PAREN, "Expected ')' after function arguments"); // 确保以右括号结尾
+            expect(ctx, sc, TK_RI_PAREN, "Expected ')' after function arguments"); // 确保以右括号结尾
         }
         if(id->class == TK_FUN) {
             emit(ctx, OP_IMM);
@@ -300,7 +301,7 @@ void parse_expr(context_t ctx, scanner sc, PrecLv level) {
 
 static void stmt_expr(ParseFunctionArgs) {
     parse_expr(PassFunctionArgs); // 解析表达式
-    consume(ctx, sc, TK_SEMICOLON, "Expected ';' after expression statement"); // 确保以分号结尾
+    expect(ctx, sc, TK_SEMICOLON, "Expected ';' after expression statement"); // 确保以分号结尾
 }
 
 static void stmt_block(ParseFunctionArgs) {
@@ -309,15 +310,26 @@ static void stmt_block(ParseFunctionArgs) {
     }
 }
 
+static void stmt_return(ParseFunctionArgs) {
+    if(match(ctx, sc, TK_SEMICOLON)) {
+        emit(ctx, OP_IMM);
+        emit(ctx, 0);
+    } else {
+        parse_expr(ctx, sc, PREC_ASSIGNMENT);
+        expect(ctx, sc, TK_SEMICOLON, "Expected ';' after return statement");
+    }
+    emit(ctx, OP_RET);
+}
+
 void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         //stmt_if(ctx, sc); // 解析 if 语句
     } else if(match(ctx, sc, TK_WHILE)) {
         //stmt_while(ctx, sc); // 解析 while 语句
     } else if(match(ctx, sc, TK_RETURN)) {
-        //stmt_return(ctx, sc); // 解析 return 语句
+        stmt_return(ctx, sc, 1);
     } else if(match(ctx, sc, '{')) {
-        stmt_block(ctx, sc, 1); // 解析代码块
+        stmt_block(ctx, sc, 1);
     } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
         //stmt_decl(ctx, sc); // 解析变量声明
     } else {
@@ -344,7 +356,7 @@ void parse_global(context_t ctx, scanner sc) {
         int arg_count = 0;
         while(!match(ctx, sc, TK_RI_PAREN)) { // 解析函数参数
             if(arg_count > 0) {
-                consume(ctx, sc, TK_COMMA, "Expected ',' in function argument list");
+                expect(ctx, sc, TK_COMMA, "Expected ',' in function argument list");
             }
             int arg_type = __ctype(ctx, sc); // 解析参数类型
             token_t* arg_id = __identifier(ctx, sc, &arg_type); // 解析参数标识符
@@ -359,7 +371,7 @@ void parse_global(context_t ctx, scanner sc) {
             arg_id->val = arg_id - ctx->sym_loc; // 计算局部变量的偏移量
             arg_count++;
         }
-        consume(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
+        expect(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
         stmt_block(ctx, sc, 1);
         SymEndloc(ctx);
         emit(ctx, OP_IMM);  // 配置默认返回值
@@ -376,7 +388,7 @@ void parse_global(context_t ctx, scanner sc) {
         }
         emit(ctx, OP_S_GLO); // 存储全局变量值
         emit(ctx, id->val);   // 使用全局变量的偏移量
-        consume(ctx, sc, TK_SEMICOLON, "Expected ';' after global variable declaration"); // 暂时不处理多个变量声明
+        expect(ctx, sc, TK_SEMICOLON, "Expected ';' after global variable declaration"); // 暂时不处理多个变量声明
     }
 }
 
