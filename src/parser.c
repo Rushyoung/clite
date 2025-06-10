@@ -427,7 +427,7 @@ static void stmt_for(ParseFunctionArgs) {
     } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
         stmt_decl(ctx, sc, 1); // 解析 for 循环的初始化部分
     } else {
-        parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析 for 循环的初始化表达式
+        stmt_expr(ctx, sc, 1); // 解析 for 循环的初始化表达式
     }
     uint64_t* addr_start = ctx->btcode_cur;
     uint64_t* addr_end = NULL;
@@ -440,17 +440,17 @@ static void stmt_for(ParseFunctionArgs) {
     if(!match(ctx, sc, TK_RI_PAREN)) {
         emit(ctx, OP_JMP);
         uint64_t* addr_body = black(ctx);
-        uint64_t* addr_inc = ctx->btcode_cur;
+        uint64_t* addr_inc = addr_body;
         parse_expr(ctx, sc, PREC_ASSIGNMENT);
         expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'for' increment expression");
         emit(ctx, OP_JMP);
         emit(ctx, addr_start - ctx->btcode);
-        addr_start = addr_body;
+        addr_start = addr_inc;
         patch(ctx, addr_body, ctx->btcode_cur - ctx->btcode);
     }
     parse_stmt(ctx, sc);
     emit(ctx, OP_JMP);
-    patch(ctx, addr_start, ctx->btcode_cur - ctx->btcode);
+    emit(ctx, addr_start - ctx->btcode); // 跳转到循环开始
     if(addr_end) {
         patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
     }
@@ -480,8 +480,8 @@ void parse_stmt(context_t ctx, scanner sc) {
         stmt_if(ctx, sc, 1); // 解析 if 语句
     } else if(match(ctx, sc, TK_WHILE)) {
         stmt_while(ctx, sc, 1); // 解析 while 语句
-    //} else if(match(ctx, sc, TK_FOR)) {
-        //stmt_for(ctx, sc); // 解析 for 语句
+    } else if(match(ctx, sc, TK_FOR)) {
+        stmt_for(ctx, sc, 1); // 解析 for 语句
     } else if(match(ctx, sc, TK_RETURN)) {
         stmt_return(ctx, sc, 1);
     } else if(match(ctx, sc, TK_LE_BRACE)) {
