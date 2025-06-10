@@ -18,6 +18,8 @@ static void expr_unary(ParseFunctionArgs);
 static void expr_binary(ParseFunctionArgs);
 static void expr_variable(ParseFunctionArgs);
 static void expr_string(ParseFunctionArgs);
+static void expr_and(ParseFunctionArgs);
+static void expr_or(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
@@ -43,8 +45,8 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_VOID]      = {NULL,            NULL,           PREC_NONE },
     [TK_ASSIGN]    = {NULL,            NULL,           PREC_NONE },
     [TK_COND]      = {NULL,            NULL,           PREC_NONE },
-    [TK_LOR]       = {NULL,            NULL,           PREC_NONE },
-    [TK_LAN]       = {NULL,            NULL,           PREC_NONE },
+    [TK_LOR]       = {NULL,            expr_or,        PREC_OR },
+    [TK_LAN]       = {NULL,            expr_and,       PREC_AND },
     [TK_NOT]       = {expr_unary,      NULL,           PREC_NONE },
     [TK_OR]        = {NULL,            expr_binary,    PREC_BITWISE },
     [TK_XOR]       = {NULL,            expr_binary,    PREC_BITWISE },
@@ -226,6 +228,23 @@ static void expr_binary(ParseFunctionArgs) {
             emit(ctx, OP_XOR); // 按位异或
             break;
     }
+}
+
+static void expr_and(ParseFunctionArgs) {
+    emit(ctx, OP_JZ);
+    uint64_t* addr = black(ctx); // 留白，跳转地址
+    parse_expr(ctx, sc, PREC_AND);
+    patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充跳转地址
+}
+
+static void expr_or(ParseFunctionArgs) {
+    emit(ctx, OP_JZ);
+    uint64_t* addr_else = black(ctx); // 留白，跳转到 else 分支
+    emit(ctx, OP_JMP);
+    uint64_t* addr_end = black(ctx);  // 留白，跳转到结束
+    patch(ctx, addr_else, ctx->btcode_cur - ctx->btcode); // 填充 else 分支跳转地址
+    parse_expr(ctx, sc, PREC_OR); // 解析右侧表达式
+    patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode); // 填充结束跳转地址
 }
 
 static void expr_variable(ParseFunctionArgs) {
