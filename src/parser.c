@@ -21,6 +21,7 @@ static void expr_variable(ParseFunctionArgs);
 static void expr_string(ParseFunctionArgs);
 static void expr_and(ParseFunctionArgs);
 static void expr_or(ParseFunctionArgs);
+static void expr_preinc(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
@@ -68,8 +69,8 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_MUL]       = {NULL,            expr_binary,    PREC_FACTOR },
     [TK_DIV]       = {NULL,            expr_binary,    PREC_FACTOR },
     [TK_MOD]       = {NULL,            expr_binary,    PREC_FACTOR },
-    [TK_INC]       = {expr_unary,      NULL,           PREC_NONE },
-    [TK_DEC]       = {expr_unary,      NULL,           PREC_NONE },
+    [TK_INC]       = {expr_preinc,     NULL,           PREC_NONE },
+    [TK_DEC]       = {expr_preinc,     NULL,           PREC_NONE },
     [TK_LE_PAREN]  = {NULL,            NULL,           PREC_NONE },
     [TK_RI_PAREN]  = {NULL,            NULL,           PREC_NONE },
     [TK_LE_BRACE]  = {NULL,            NULL,           PREC_NONE },
@@ -177,22 +178,40 @@ static void expr_unary(ParseFunctionArgs) {
         case TK_NOT:
             emit(ctx, OP_NOT); // 逻辑非，生成逻辑非指令
             break;
-        case TK_INC:
-            emit(ctx, OP_PUSH); // 前置自增，先压栈
-            emit(ctx, OP_IMM); // 前置自增
-            emit(ctx, 1); // 生成立即数1
-            emit(ctx, OP_ADD); // 执行加法
-            break;
-        case TK_DEC:
-            emit(ctx, OP_PUSH); // 前置自减，先压栈
-            emit(ctx, OP_IMM); // 前置自减
-            emit(ctx, 1); // 生成立即数1
-            emit(ctx, OP_SUB); // 执行减法
-            break;
         default:
             printf("Unexpected unary operator: %d", current.tk);
             exit(EXIT_FAILURE);
     }
+}
+
+static void expr_preinc(ParseFunctionArgs) {
+    token_t current = prev(sc, ctx);
+    expect(ctx, sc, TK_ID, "Expected identifier after increment/decrement operator");
+    token_t* id = SymFind(ctx, prev(sc, ctx));
+    if(id->class == 0) {
+        printf("Identifier not declared before use");
+        exit(EXIT_FAILURE);
+    }
+    uint64_t op_set = OP_S_GLO;
+    uint64_t op_get = OP_G_GLO;
+    uint64_t op_calc = 0;
+    if(id >= ctx->sym_loc) { // 如果是局部变量
+        op_set = OP_S_LOC;
+        op_get = OP_G_LOC;
+    }
+    if(current.tk == TK_INC) {
+        op_calc = OP_ADD; // 自增
+    } else if(current.tk == TK_DEC) {
+        op_calc = OP_SUB; // 自减
+    }
+    emit(ctx, op_get);
+    emit(ctx, id->val);
+    emit(ctx, OP_PUSH);
+    emit(ctx, OP_IMM);
+    emit(ctx, 1);
+    emit(ctx, op_calc);
+    emit(ctx, op_set);
+    emit(ctx, id->val);
 }
 
 static void expr_binary(ParseFunctionArgs) {
