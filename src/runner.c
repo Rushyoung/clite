@@ -232,6 +232,15 @@ int run(context_t ctx){
                 sp--;
                 ax = close(sp[0]);
                 break;
+            case OP_EXIT:
+                if(*pc != 1){
+                    fprintf(stderr, "exit() expects 1 argument, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                sp--;
+                free(stk);
+                exit(sp[0]); // exit the program
             default:
                 fprintf(stderr, "Unknown opcode: %llu\n", ip);
                 free(stk);
