@@ -11,6 +11,7 @@ struct _scanner{
     char*  src;
     char*  cur;
     char*  pre;
+    token_t idt;
     token_t prv;
     token_t loc;
 };
@@ -18,6 +19,7 @@ typedef struct _scanner* scanner;
 
 scanner InitScanner(size_t size, char* src);
 
+token_t idnt(scanner sc, context_t ctx);
 token_t prev(scanner sc, context_t ctx);
 token_t prst(scanner sc, context_t ctx);
 
