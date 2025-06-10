@@ -25,6 +25,7 @@ static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
 static void stmt_return(ParseFunctionArgs);
 static void stmt_decl(ParseFunctionArgs);
+static void stmt_while(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -51,12 +52,12 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_OR]        = {NULL,            expr_binary,    PREC_BITWISE },
     [TK_XOR]       = {NULL,            expr_binary,    PREC_BITWISE },
     [TK_AND]       = {NULL,            expr_binary,    PREC_BITWISE },
-    [TK_EQ]        = {NULL,            NULL,           PREC_NONE },
-    [TK_NE]        = {NULL,            NULL,           PREC_NONE },
-    [TK_LT]        = {NULL,            NULL,           PREC_NONE },
-    [TK_GT]        = {NULL,            NULL,           PREC_NONE },
-    [TK_LE]        = {NULL,            NULL,           PREC_NONE },
-    [TK_GE]        = {NULL,            NULL,           PREC_NONE },
+    [TK_EQ]        = {NULL,            expr_binary,    PREC_EQUALITY },
+    [TK_NE]        = {NULL,            expr_binary,    PREC_EQUALITY },
+    [TK_LT]        = {NULL,            expr_binary,    PREC_COMPARISON },
+    [TK_GT]        = {NULL,            expr_binary,    PREC_COMPARISON },
+    [TK_LE]        = {NULL,            expr_binary,    PREC_COMPARISON },
+    [TK_GE]        = {NULL,            expr_binary,    PREC_COMPARISON },
     [TK_SHL]       = {NULL,            expr_binary,    PREC_SHIFT },
     [TK_SHR]       = {NULL,            expr_binary,    PREC_SHIFT },
     [TK_ADD]       = {expr_unary,      expr_binary,    PREC_TERM },
@@ -227,6 +228,27 @@ static void expr_binary(ParseFunctionArgs) {
         case TK_XOR:
             emit(ctx, OP_XOR); // 按位异或
             break;
+        case TK_EQ:
+            emit(ctx, OP_EQU); // 等于
+            break;
+        case TK_NE:
+            emit(ctx, OP_EQU);
+            emit(ctx, OP_NOT);
+            break; // 不等于
+        case TK_LT:
+            emit(ctx, OP_LES);
+            break;
+        case TK_GT:
+            emit(ctx, OP_GRT);
+            break;
+        case TK_LE:
+            emit(ctx, OP_GRT);
+            emit(ctx, OP_NOT);
+            break;
+        case TK_GE:
+            emit(ctx, OP_LES);
+            emit(ctx, OP_NOT);
+            break;
     }
 }
 
@@ -303,6 +325,7 @@ void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx);
     ParseFn prefixFn = Rules[prev(sc, ctx).tk].prefix; 
     if(prefixFn == NULL) {
+        log(DumpToken(ctx, prev(sc, ctx)));
         printf("Expected expression, but something else found");
         exit(EXIT_FAILURE);
     }
@@ -382,14 +405,30 @@ static void stmt_decl(ParseFunctionArgs) {
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after variable declaration"); // 确保以分号结尾
 }
 
+static void stmt_while(ParseFunctionArgs) {
+    expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
+    uint64_t* addr_start = ctx->btcode_cur;
+    parse_expr(ctx, sc, PREC_ASSIGNMENT);
+    log(DumpToken(ctx, prst(sc, ctx)));
+    expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
+    emit(ctx, OP_JZ);
+    uint64_t* addr_end = black(ctx);
+    parse_stmt(ctx, sc);
+    emit(ctx, OP_JMP);
+    emit(ctx, addr_start - ctx->btcode);
+    patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
+}
+
 void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         //stmt_if(ctx, sc); // 解析 if 语句
     } else if(match(ctx, sc, TK_WHILE)) {
-        //stmt_while(ctx, sc); // 解析 while 语句
+        stmt_while(ctx, sc, 1); // 解析 while 语句
+    //} else if(match(ctx, sc, TK_FOR)) {
+        //stmt_for(ctx, sc); // 解析 for 语句
     } else if(match(ctx, sc, TK_RETURN)) {
         stmt_return(ctx, sc, 1);
-    } else if(match(ctx, sc, '{')) {
+    } else if(match(ctx, sc, TK_LE_BRACE)) {
         stmt_block(ctx, sc, 1);
     } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
         stmt_decl(ctx, sc, 1);
