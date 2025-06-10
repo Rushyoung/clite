@@ -123,7 +123,7 @@ void DumpScanner(scanner sc) {
         printf("Scanner is NULL\n");
         return;
     }
-    
+
     sc->cur = sc->src;
     sc->pre = NULL;
     next(sc, ctx); // 初始化扫描器

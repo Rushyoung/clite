@@ -380,7 +380,8 @@ void parse_global(context_t ctx, scanner sc) {
         emit(ctx, 0);
         emit(ctx, OP_RET);
         patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充函数结束地址
-    } else {      
+    } else {
+        define_loop:
         id->class = TK_GLO; 
         id->val = id - ctx->sym;
         if(match(ctx, sc, TK_ASSIGN)) {
@@ -389,9 +390,21 @@ void parse_global(context_t ctx, scanner sc) {
             emit(ctx, OP_IMM); // 初始化为0
             emit(ctx, 0);
         }
-        emit(ctx, OP_S_GLO); // 存储全局变量值
+        emit(ctx, OP_S_GLO);
         emit(ctx, id->val);   // 使用全局变量的偏移量
-        expect(ctx, sc, TK_SEMICOLON, "Expected ';' after global variable declaration"); // 暂时不处理多个变量声明
+        if(match(ctx, sc, TK_SEMICOLON)){
+            return;
+        } else if(!match(ctx, sc, TK_COMMA)) {
+            printf("Expected ',' or ';' after global variable declaration");
+            exit(EXIT_FAILURE);
+        }
+        id = __identifier(ctx, sc, &real_type); // 继续解析下一个标识符
+        if(id->class == TK_GLO || id->class == TK_FUN) {
+            printf("Global variable '%.*s' already defined", id->name, id->len);
+            exit(EXIT_FAILURE);
+        }
+        id->type = real_type; // 设置变量类型
+        goto define_loop;
     }
 }
 
