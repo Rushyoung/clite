@@ -4,3 +4,6 @@ build
 
 c4.c
 hello.c
+/cmake-build-debug/
+/.cache/
+/.idea
