@@ -24,7 +24,7 @@ context_t InitContext(){
     ctx->btcode_cur = ctx->btcode;
 
     char* builtin = 
-    "char else enum if int return sizeof while void main "
+    "char else enum for if int return sizeof while void main "
     "open read close printf malloc free memset memcmp exit";
     scanner keyword = InitScanner(106, builtin);
 

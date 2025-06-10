@@ -14,6 +14,7 @@ typedef enum {
     TK_CHAR,      // 字符
     TK_ELSE,      // else 关键字
     TK_ENUM,      // enum 关键字
+    TK_FOR,       // for 关键字
     TK_IF,        // if 关键字
     TK_INT,       // int 关键字
     TK_RETURN,    // return 关键字
