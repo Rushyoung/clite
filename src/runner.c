@@ -13,18 +13,12 @@ int run(context_t ctx){
     uint64_t* stk = NULL;
     uint64_t* bp = NULL;
     uint64_t* sp = NULL;
-    uint64_t* pc = NULL;
+    uint64_t* pc = ctx->btcode;
     uint64_t  ip = 0;
     uint64_t  ax = 0;
     stk = bp = sp = (uint64_t*)malloc(8192 * sizeof(uint64_t)); // allocate stack memory
     if(!stk){
         fprintf(stderr, "Failed to allocate memory for stack\n");
-        return -1;
-    }
-    pc = ctx->btcode;
-    if(!pc){
-        fprintf(stderr, "Main function not found\n");
-        free(stk);
         return -1;
     }
     for(ip = *pc; ip != 0; ip = *pc){
@@ -172,6 +166,14 @@ int run(context_t ctx){
                 sp -= *pc; // pop arguments
                 ax = printf(sp[0], sp[1], sp[2], sp[3], sp[4], sp[5]);
                 pc++;
+                break;
+            case OP_MALLOC:
+                if(*pc != 1){
+                    fprintf(stderr, "malloc() expects 1 argument, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                ax = malloc(ax);
                 break;
             default:
                 fprintf(stderr, "Unknown opcode: %llu\n", ip);
