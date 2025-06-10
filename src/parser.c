@@ -411,7 +411,6 @@ static void stmt_while(ParseFunctionArgs) {
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
     uint64_t* addr_start = ctx->btcode_cur;
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
-    log(DumpToken(ctx, prst(sc, ctx)));
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
     emit(ctx, OP_JZ);
     uint64_t* addr_end = black(ctx);
@@ -419,6 +418,26 @@ static void stmt_while(ParseFunctionArgs) {
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode);
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
+}
+
+static void stmt_if(ParseFunctionArgs){
+    expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'if'");
+    parse_expr(ctx, sc, PREC_ASSIGNMENT);
+    expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'if' condition");
+    emit(ctx, OP_JZ);
+    uint64_t* if_end = black(ctx);
+    parse_stmt(ctx, sc);
+    //if end
+    if(match(ctx, sc, TK_ELSE)){
+        emit(ctx, OP_JMP);
+        uint64_t* el_end = black(ctx);
+        patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
+        parse_stmt(ctx, sc);
+        patch(ctx, el_end, ctx->btcode_cur - ctx->btcode);
+    }
+    else {
+        patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
+    }
 }
 
 void parse_stmt(context_t ctx, scanner sc) {
@@ -507,27 +526,6 @@ void parse_global(context_t ctx, scanner sc) {
         }
         id->type = real_type; // 设置变量类型
         goto define_loop;
-    }
-}
-
-static void stmt_if(ParseFunctionArgs){
-    expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'if'");
-    parse_expr(ctx, sc, PREC_ASSIGNMENT);
-    log(DumpToken(ctx, prst(sc, ctx)));
-    expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'if' condition");
-    emit(ctx, OP_JZ);
-    uint64_t* if_end = black(ctx);
-    parse_stmt(ctx, sc);
-    //if end
-    if(match(ctx, sc, TK_ELSE)){
-        emit(ctx, OP_JMP);
-        uint64_t* el_end = black(ctx);
-        patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
-        parse_stmt(ctx, sc);
-        patch(ctx, el_end, ctx->btcode_cur - ctx->btcode);
-    }
-    else {
-        patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
     }
 }
 
