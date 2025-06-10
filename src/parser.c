@@ -1,5 +1,6 @@
 #include "parser.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -26,6 +27,7 @@ static void stmt_block(ParseFunctionArgs);
 static void stmt_return(ParseFunctionArgs);
 static void stmt_decl(ParseFunctionArgs);
 static void stmt_while(ParseFunctionArgs);
+static void stmt_if(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -421,7 +423,7 @@ static void stmt_while(ParseFunctionArgs) {
 
 void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
-        //stmt_if(ctx, sc); // 解析 if 语句
+        stmt_if(ctx, sc, 1); // 解析 if 语句
     } else if(match(ctx, sc, TK_WHILE)) {
         stmt_while(ctx, sc, 1); // 解析 while 语句
     //} else if(match(ctx, sc, TK_FOR)) {
@@ -505,6 +507,27 @@ void parse_global(context_t ctx, scanner sc) {
         }
         id->type = real_type; // 设置变量类型
         goto define_loop;
+    }
+}
+
+static void stmt_if(ParseFunctionArgs){
+    expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'if'");
+    parse_expr(ctx, sc, PREC_ASSIGNMENT);
+    log(DumpToken(ctx, prst(sc, ctx)));
+    expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'if' condition");
+    emit(ctx, OP_JZ);
+    uint64_t* if_end = black(ctx);
+    parse_stmt(ctx, sc);
+    //if end
+    if(match(ctx, sc, TK_ELSE)){
+        emit(ctx, OP_JMP);
+        uint64_t* el_end = black(ctx);
+        patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
+        parse_stmt(ctx, sc);
+        patch(ctx, el_end, ctx->btcode_cur - ctx->btcode);
+    }
+    else {
+        patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
     }
 }
 
