@@ -52,9 +52,6 @@ int run(context_t ctx){
                 ax = *pc;
                 pc++;
                 break;
-            case OP_JMP:
-                pc = ctx->btcode + *pc; // 跳转到指定地址
-                break;
             case OP_SAD:
                 // 保存当前栈地址到栈顶
                 *sp = (uint64_t)(sp - stk);
@@ -84,11 +81,14 @@ int run(context_t ctx){
                 sp = bp - 3; // 恢复栈指针
                 bp = stk + *(bp - 2); // 恢复基指针
                 break;
+            case OP_JMP:
+                pc = ctx->btcode + *pc; // 跳转到指定地址
+                break;
             case OP_JZ:
                 if(ax){
                     pc++;
                 } else {
-                    pc = stk + *pc;
+                    pc = ctx->btcode + *pc;
                 }
                 break;
             case OP_PUSH:

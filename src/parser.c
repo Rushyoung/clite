@@ -18,10 +18,13 @@ static void expr_unary(ParseFunctionArgs);
 static void expr_binary(ParseFunctionArgs);
 static void expr_variable(ParseFunctionArgs);
 static void expr_string(ParseFunctionArgs);
+static void expr_and(ParseFunctionArgs);
+static void expr_or(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
 static void stmt_return(ParseFunctionArgs);
+static void stmt_decl(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -42,8 +45,8 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_VOID]      = {NULL,            NULL,           PREC_NONE },
     [TK_ASSIGN]    = {NULL,            NULL,           PREC_NONE },
     [TK_COND]      = {NULL,            NULL,           PREC_NONE },
-    [TK_LOR]       = {NULL,            NULL,           PREC_NONE },
-    [TK_LAN]       = {NULL,            NULL,           PREC_NONE },
+    [TK_LOR]       = {NULL,            expr_or,        PREC_OR },
+    [TK_LAN]       = {NULL,            expr_and,       PREC_AND },
     [TK_NOT]       = {expr_unary,      NULL,           PREC_NONE },
     [TK_OR]        = {NULL,            expr_binary,    PREC_BITWISE },
     [TK_XOR]       = {NULL,            expr_binary,    PREC_BITWISE },
@@ -227,6 +230,23 @@ static void expr_binary(ParseFunctionArgs) {
     }
 }
 
+static void expr_and(ParseFunctionArgs) {
+    emit(ctx, OP_JZ);
+    uint64_t* addr = black(ctx); // 留白，跳转地址
+    parse_expr(ctx, sc, PREC_AND);
+    patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充跳转地址
+}
+
+static void expr_or(ParseFunctionArgs) {
+    emit(ctx, OP_JZ);
+    uint64_t* addr_else = black(ctx); // 留白，跳转到 else 分支
+    emit(ctx, OP_JMP);
+    uint64_t* addr_end = black(ctx);  // 留白，跳转到结束
+    patch(ctx, addr_else, ctx->btcode_cur - ctx->btcode); // 填充 else 分支跳转地址
+    parse_expr(ctx, sc, PREC_OR); // 解析右侧表达式
+    patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode); // 填充结束跳转地址
+}
+
 static void expr_variable(ParseFunctionArgs) {
     token_t tk = prev(sc, ctx);     // 获取当前标识符
     token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
@@ -321,6 +341,47 @@ static void stmt_return(ParseFunctionArgs) {
     emit(ctx, OP_RET);
 }
 
+static void stmt_decl(ParseFunctionArgs) {
+    int base_type = 0;
+    token_t type = prev(sc, ctx); // 获取当前类型声明
+    if(type.tk == TK_INT) {
+        base_type = TP_INT; // 整型
+    } else if(type.tk == TK_CHAR) {
+        base_type = TP_CHAR; // 字符型
+    } else if(type.tk == TK_VOID) {
+        base_type = TP_VOID; // 空类型
+    } else {
+        printf("Expected type declaration (int, char, void)");
+        exit(EXIT_FAILURE);
+    }
+    int real_type = base_type;
+    do{
+        token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
+        if(id->class == TK_LOC) {
+            printf("Variable '%.*s' already defined", id->name, id->len);
+            exit(EXIT_FAILURE);
+        } else if(id->class == TK_GLO || id->class == TK_FUN) {
+            id = SymAdd(ctx, *id); // 如果是全局变量或函数，则添加到符号表
+        }
+        if(real_type == TP_VOID) {
+            printf("Variable '%.*s' cannot be of type void", id->name, id->len);
+            exit(EXIT_FAILURE);
+        }
+        id->type = real_type;
+        id->class = TK_LOC;
+        id->val = id - ctx->sym_loc;
+        if(match(ctx, sc, TK_ASSIGN)) {
+            parse_expr(ctx, sc, PREC_ASSIGNMENT);
+        } else {
+            emit(ctx, OP_IMM);
+            emit(ctx, 0);
+        }
+        emit(ctx, OP_S_LOC); 
+        emit(ctx, id->val);
+    }while(match(ctx, sc, TK_COMMA));
+    expect(ctx, sc, TK_SEMICOLON, "Expected ';' after variable declaration"); // 确保以分号结尾
+}
+
 void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         //stmt_if(ctx, sc); // 解析 if 语句
@@ -331,7 +392,7 @@ void parse_stmt(context_t ctx, scanner sc) {
     } else if(match(ctx, sc, '{')) {
         stmt_block(ctx, sc, 1);
     } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
-        //stmt_decl(ctx, sc); // 解析变量声明
+        stmt_decl(ctx, sc, 1);
     } else {
         stmt_expr(ctx, sc, 1); // 解析表达式语句
     }
@@ -380,7 +441,8 @@ void parse_global(context_t ctx, scanner sc) {
         emit(ctx, 0);
         emit(ctx, OP_RET);
         patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充函数结束地址
-    } else {      
+    } else {
+        define_loop:
         id->class = TK_GLO; 
         id->val = id - ctx->sym;
         if(match(ctx, sc, TK_ASSIGN)) {
@@ -389,9 +451,21 @@ void parse_global(context_t ctx, scanner sc) {
             emit(ctx, OP_IMM); // 初始化为0
             emit(ctx, 0);
         }
-        emit(ctx, OP_S_GLO); // 存储全局变量值
+        emit(ctx, OP_S_GLO);
         emit(ctx, id->val);   // 使用全局变量的偏移量
-        expect(ctx, sc, TK_SEMICOLON, "Expected ';' after global variable declaration"); // 暂时不处理多个变量声明
+        if(match(ctx, sc, TK_SEMICOLON)){
+            return;
+        } else if(!match(ctx, sc, TK_COMMA)) {
+            printf("Expected ',' or ';' after global variable declaration");
+            exit(EXIT_FAILURE);
+        }
+        id = __identifier(ctx, sc, &real_type); // 继续解析下一个标识符
+        if(id->class == TK_GLO || id->class == TK_FUN) {
+            printf("Global variable '%.*s' already defined", id->name, id->len);
+            exit(EXIT_FAILURE);
+        }
+        id->type = real_type; // 设置变量类型
+        goto define_loop;
     }
 }
 
