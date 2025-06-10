@@ -149,11 +149,11 @@ void DumpBtcode(context_t ctx){
         } else {
             printf("%-10s ", "UNKNOWN");
         }
-        if((OP_G_GLO <= op && op <= OP_CALL) || // 1-8 are variable operations
-           (OP_OPEN <= op && op <= OP_EXIT)) { // 24-32 are system calls
-            printf("value: %lld\n", *cur++);
-        } else if (op == OP_JMP || op == OP_JZ) {
+        if (op == OP_JMP || op == OP_JZ) {
             printf("Jump to: %lld\n", *cur++);
+        } else if((OP_G_GLO <= op && op <= OP_CALL) || // 1-8 are variable operations
+                  (OP_OPEN <= op && op <= OP_EXIT)) { // 24-32 are system calls
+            printf("value: %lld\n", *cur++);
         } else {
             printf("\n");
         }

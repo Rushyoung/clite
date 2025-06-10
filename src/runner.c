@@ -60,10 +60,9 @@ int run(context_t ctx){
                 sp++;
                 *sp = 0; // 占位符，后续覆盖为函数返回地址
                 sp++;
-                bp = sp; // 更新基指针
                 break;
             case OP_CALL:
-                // 保存当前基指针和栈指针
+                bp = sp - *pc;
                 printf("call to function at %llu\n", ax);
                 printf("bp will be set to %llu\n", bp - stk);
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
@@ -97,19 +96,20 @@ int run(context_t ctx){
                 sp++;
                 break;
             case OP_OR:
-                ax = *sp | ax;
                 sp--;
+                ax = *sp | ax;
                 break;
             case OP_XOR:
-                ax = *sp ^ ax;
                 sp--;
+                ax = *sp ^ ax;
                 break;
             case OP_AND:
-                ax = *sp & ax;
                 sp--;
+                ax = *sp & ax;
                 break;
             case OP_EQU:
                 sp--;
+                printf("checking %d == %d\n", *sp, ax);
                 ax = (*sp == ax);
                 break;
             case OP_GRT:
