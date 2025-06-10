@@ -1,9 +1,10 @@
 #include "runner.h"
 
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "def.h"
 #include "opcode.h"
@@ -173,7 +174,63 @@ int run(context_t ctx){
                     free(stk);
                     return -1;
                 }
-                ax = malloc(ax);
+                sp--;
+                ax = malloc(sp[0]);
+                break;
+            case OP_FREE:
+                if(*pc != 1){
+                    fprintf(stderr, "free() expects 1 argument, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                sp--;
+                free((void*)sp[0]);
+                ax = 0;
+                break;
+            case OP_MEMSET:
+                if(*pc != 3){
+                    fprintf(stderr, "memset() expects 3 arguments, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                sp -= 2; // pop address and value
+                ax = memset((void*)sp[0], sp[1], sp[2]);
+                break;
+            case OP_MEMCMP:
+                if(*pc != 3){
+                    fprintf(stderr, "memcmp() expects 3 arguments, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                sp -= 2; // pop two addresses
+                ax = memcmp((void*)sp[0], (void*)sp[1], sp[2]);
+                break;
+            case OP_READ:
+                if(*pc != 3){
+                    fprintf(stderr, "read() expects 3 arguments, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                sp -= 3;
+                ax = read(sp[0], (void*)sp[1], sp[2]);
+                break;
+            case OP_OPEN:
+                if(*pc != 2){
+                    fprintf(stderr, "open() expects 2 arguments, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                sp -= 2; // pop filename and flags
+                ax = open((const char*)sp[0], sp[1]);
+                break;
+            case OP_CLOSE:
+                if(*pc != 1){
+                    fprintf(stderr, "close() expects 1 argument, got %llu\n", *pc);
+                    free(stk);
+                    return -1;
+                }
+                sp--;
+                ax = close(sp[0]);
                 break;
             default:
                 fprintf(stderr, "Unknown opcode: %llu\n", ip);

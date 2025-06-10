@@ -23,6 +23,7 @@ static void expr_and(ParseFunctionArgs);
 static void expr_or(ParseFunctionArgs);
 static void expr_preinc(ParseFunctionArgs);
 static void expr_call(ParseFunctionArgs);
+static void expr_offset(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
