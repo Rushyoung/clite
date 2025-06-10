@@ -28,6 +28,7 @@ static void stmt_return(ParseFunctionArgs);
 static void stmt_decl(ParseFunctionArgs);
 static void stmt_while(ParseFunctionArgs);
 static void stmt_if(ParseFunctionArgs);
+static void stmt_for(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -420,6 +421,41 @@ static void stmt_while(ParseFunctionArgs) {
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
 }
 
+static void stmt_for(ParseFunctionArgs) {
+    expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'for'");
+    if(match(ctx, sc, TK_SEMICOLON)) {
+    } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
+        stmt_decl(ctx, sc, 1); // 解析 for 循环的初始化部分
+    } else {
+        parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析 for 循环的初始化表达式
+    }
+    uint64_t* addr_start = ctx->btcode_cur;
+    uint64_t* addr_end = NULL;
+    if(!match(ctx, sc, TK_SEMICOLON)) {
+        parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析条件表达式
+        expect(ctx, sc, TK_SEMICOLON, "Expected ';' after 'for' condition");
+        emit(ctx, OP_JZ);
+        addr_end = black(ctx); // 留白，跳转到循环结束
+    }
+    if(!match(ctx, sc, TK_RI_PAREN)) {
+        emit(ctx, OP_JMP);
+        uint64_t* addr_body = black(ctx);
+        uint64_t* addr_inc = ctx->btcode_cur;
+        parse_expr(ctx, sc, PREC_ASSIGNMENT);
+        expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'for' increment expression");
+        emit(ctx, OP_JMP);
+        emit(ctx, addr_start - ctx->btcode);
+        addr_start = addr_body;
+        patch(ctx, addr_body, ctx->btcode_cur - ctx->btcode);
+    }
+    parse_stmt(ctx, sc);
+    emit(ctx, OP_JMP);
+    patch(ctx, addr_start, ctx->btcode_cur - ctx->btcode);
+    if(addr_end) {
+        patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
+    }
+}
+
 static void stmt_if(ParseFunctionArgs){
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'if'");
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
@@ -434,8 +470,7 @@ static void stmt_if(ParseFunctionArgs){
         patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
         parse_stmt(ctx, sc);
         patch(ctx, el_end, ctx->btcode_cur - ctx->btcode);
-    }
-    else {
+    } else {
         patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
     }
 }
