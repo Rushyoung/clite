@@ -327,20 +327,34 @@ static void expr_variable(ParseFunctionArgs) {
     }
     int op_set_code = OP_S_GLO; // 默认操作码为全局变量存储
     int op_get_code = OP_G_GLO;
-    int offset = id->val;
     if(id >= ctx->sym_loc) { // 如果是局部变量
         op_set_code = OP_S_LOC; // 设置操作码为局部变量存储
         op_get_code = OP_G_LOC; // 设置操作码为局部变量获取
-        offset = id - ctx->sym_loc; // 计算局部变量的偏移量
+    }
+    if(match(ctx, sc, TK_INC) || match(ctx, sc, TK_DEC)) {
+        token_t inc_dec = prev(sc, ctx); // 获取自增或自减操作符
+        uint64_t op_calc = (inc_dec.tk == TK_INC) ? OP_ADD : OP_SUB;
+        emit(ctx, op_get_code);
+        emit(ctx, id->val);
+        emit(ctx, OP_PUSH);
+        emit(ctx, OP_PUSH);
+        emit(ctx, OP_IMM);
+        emit(ctx, 1);
+        emit(ctx, op_calc);
+        emit(ctx, op_set_code);
+        emit(ctx, id->val);
+        emit(ctx, OP_IMM);
+        emit(ctx, 0);
+        emit(ctx, OP_ADD);
+        return;
     }
     if(can_assign && match(ctx, sc, TK_ASSIGN)) {
         parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析赋值表达式
-        emit(ctx, op_set_code); // 生成存储指令
-        emit(ctx, offset); // 使用变量的偏移量
+        emit(ctx, op_set_code);
     } else {
-        emit(ctx, op_get_code); // 生成获取指令
-        emit(ctx, offset); // 使用变量的偏移量
+        emit(ctx, op_get_code);
     }
+    emit(ctx, id->val);
 }
 
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
@@ -459,7 +473,7 @@ static void stmt_for(ParseFunctionArgs) {
     if(!match(ctx, sc, TK_RI_PAREN)) {
         emit(ctx, OP_JMP);
         uint64_t* addr_body = black(ctx);
-        uint64_t* addr_inc = addr_body;
+        uint64_t* addr_inc = ctx->btcode_cur;
         parse_expr(ctx, sc, PREC_ASSIGNMENT);
         expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'for' increment expression");
         emit(ctx, OP_JMP);
