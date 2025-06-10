@@ -22,6 +22,7 @@ static void expr_string(ParseFunctionArgs);
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
 static void stmt_return(ParseFunctionArgs);
+static void stmt_decl(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -321,6 +322,47 @@ static void stmt_return(ParseFunctionArgs) {
     emit(ctx, OP_RET);
 }
 
+static void stmt_decl(ParseFunctionArgs) {
+    int base_type = 0;
+    token_t type = prev(sc, ctx); // 获取当前类型声明
+    if(type.tk == TK_INT) {
+        base_type = TP_INT; // 整型
+    } else if(type.tk == TK_CHAR) {
+        base_type = TP_CHAR; // 字符型
+    } else if(type.tk == TK_VOID) {
+        base_type = TP_VOID; // 空类型
+    } else {
+        printf("Expected type declaration (int, char, void)");
+        exit(EXIT_FAILURE);
+    }
+    int real_type = base_type;
+    do{
+        token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
+        if(id->class == TK_LOC) {
+            printf("Variable '%.*s' already defined", id->name, id->len);
+            exit(EXIT_FAILURE);
+        } else if(id->class == TK_GLO || id->class == TK_FUN) {
+            id = SymAdd(ctx, *id); // 如果是全局变量或函数，则添加到符号表
+        }
+        if(real_type == TP_VOID) {
+            printf("Variable '%.*s' cannot be of type void", id->name, id->len);
+            exit(EXIT_FAILURE);
+        }
+        id->type = real_type;
+        id->class = TK_LOC;
+        id->val = id - ctx->sym_loc;
+        if(match(ctx, sc, TK_ASSIGN)) {
+            parse_expr(ctx, sc, PREC_ASSIGNMENT);
+        } else {
+            emit(ctx, OP_IMM);
+            emit(ctx, 0);
+        }
+        emit(ctx, OP_S_LOC); 
+        emit(ctx, id->val);
+    }while(match(ctx, sc, TK_COMMA));
+    expect(ctx, sc, TK_SEMICOLON, "Expected ';' after variable declaration"); // 确保以分号结尾
+}
+
 void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         //stmt_if(ctx, sc); // 解析 if 语句
@@ -331,7 +373,7 @@ void parse_stmt(context_t ctx, scanner sc) {
     } else if(match(ctx, sc, '{')) {
         stmt_block(ctx, sc, 1);
     } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
-        //stmt_decl(ctx, sc); // 解析变量声明
+        stmt_decl(ctx, sc, 1);
     } else {
         stmt_expr(ctx, sc, 1); // 解析表达式语句
     }
