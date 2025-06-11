@@ -221,20 +221,13 @@ static token_t advance(scanner sc, context_t ctx){
 void next(scanner sc, context_t ctx){
     sc->prv = sc->loc;
     sc->loc = advance(sc, ctx);
-    if(sc->loc.tk == TK_ID){
-        sc->idt = sc->loc;
-    }
 }
 
-token_t idnt(scanner sc, context_t ctx){
-    return sc->idt;
-}
-
-token_t prst(scanner sc, context_t ctx){
+token_t prst(scanner sc){
     return sc->loc;
 }
 
-token_t prev(scanner sc, context_t ctx){
+token_t prev(scanner sc){
     return sc->prv;
 }
 
@@ -247,6 +240,5 @@ scanner InitScanner(size_t size, char* src){
     sc->pre = NULL;
     sc->loc = (token_t){0};
     sc->prv = (token_t){0};
-    sc->idt = (token_t){0};
     return sc;
 }

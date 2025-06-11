@@ -132,7 +132,7 @@ void DumpScanner(scanner sc) {
     sc->cur = sc->src;
     sc->pre = NULL;
     next(sc, ctx); // 初始化扫描器
-    for(token_t tk = prst(sc, ctx); tk.tk; tk = prst(sc, ctx)) {
+    for(token_t tk = prst(sc); tk.tk; tk = prst(sc)) {
         DumpToken(ctx, tk);
         next(sc, ctx);
     }

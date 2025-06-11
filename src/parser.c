@@ -92,7 +92,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
 };
 
 static int match(context_t ctx, scanner sc, TkType tk) {
-    token_t current = prst(sc, ctx);
+    token_t current = prst(sc);
     if(current.tk == tk) {
         next(sc, ctx);
         return 1; // 匹配成功
@@ -101,7 +101,7 @@ static int match(context_t ctx, scanner sc, TkType tk) {
 }
 
 static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
-    token_t current = prst(sc, ctx);
+    token_t current = prst(sc);
     if(current.tk != tk) {
         raise(sc->line, msg);
     }
@@ -110,7 +110,7 @@ static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
 
 
 static int __ctype(context_t ctx, scanner sc) {
-    token_t tk = prst(sc, ctx);
+    token_t tk = prst(sc);
     int type = TP_INT; // 默认类型为整型
     switch(tk.tk) {
         case TK_INT:
@@ -134,11 +134,11 @@ static token_t* __identifier(context_t ctx, scanner sc, int* type) {
         *type += TP_PTR; // 处理指针类型
     }
     expect(ctx, sc, TK_ID, "Expected identifier after type declaration");
-    return SymFind(ctx, prev(sc, ctx));
+    return SymFind(ctx, prev(sc));
 }
 
 static void expr_number(ParseFunctionArgs) {
-    token_t current = prev(sc, ctx);
+    token_t current = prev(sc);
     emit(ctx, OP_IMM);
     emit(ctx, current.val);
 }
@@ -148,9 +148,9 @@ static void expr_string(ParseFunctionArgs) {
     emit(ctx, ctx->heap_cur);
     emit(ctx, OP_STR);
     do{
-        token_t current = prev(sc, ctx);
+        token_t current = prev(sc);
         char c = 0;
-        for(int i = 0; i < current.len; i++) {
+        for(size_t i = 0; i < current.len; i++) {
             c = current.name[i];
             if(c == '\\') { // 处理转义字符
                 i++;
@@ -173,7 +173,7 @@ static void expr_string(ParseFunctionArgs) {
 }
 
 static void expr_unary(ParseFunctionArgs) {
-    token_t current = prev(sc, ctx);
+    token_t current = prev(sc);
     parse_expr(ctx, sc, PREC_UNARY); // 解析表达式
     switch(current.tk) {
         case TK_ADD:
@@ -191,9 +191,9 @@ static void expr_unary(ParseFunctionArgs) {
 }
 
 static void expr_preinc(ParseFunctionArgs) {
-    token_t current = prev(sc, ctx);
+    token_t current = prev(sc);
     expect(ctx, sc, TK_ID, "Expected identifier after increment/decrement operator");
-    token_t* id = SymFind(ctx, prev(sc, ctx));
+    token_t* id = SymFind(ctx, prev(sc));
     if(id->class == 0) {
         raise(sc->line, "Identifier not declared before use");
     }
@@ -221,7 +221,7 @@ static void expr_preinc(ParseFunctionArgs) {
 
 static void expr_binary(ParseFunctionArgs) {
     emit(ctx, OP_PUSH);
-    token_t current = prev(sc, ctx);
+    token_t current = prev(sc);
     PrecLv level = Rules[current.tk].prec; // 获取当前操作符的优先级
     parse_expr(ctx, sc, level + 1); // 解析左侧表达式
     switch(current.tk) {
@@ -297,7 +297,7 @@ static void expr_or(ParseFunctionArgs) {
 }
 
 static void expr_variable(ParseFunctionArgs) {
-    token_t tk = prev(sc, ctx);     // 获取当前标识符
+    token_t tk = prev(sc);     // 获取当前标识符
     token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
     if(id->class == 0){
         raise(sc->line, "Identifier not declared before use");
@@ -314,7 +314,7 @@ static void expr_variable(ParseFunctionArgs) {
         op_get_code = OP_G_LOC; // 设置操作码为局部变量获取
     }
     if(match(ctx, sc, TK_INC) || match(ctx, sc, TK_DEC)) {
-        token_t inc_dec = prev(sc, ctx); // 获取自增或自减操作符
+        token_t inc_dec = prev(sc); // 获取自增或自减操作符
         uint64_t op_calc = (inc_dec.tk == TK_INC) ? OP_ADD : OP_SUB;
         emit(ctx, op_get_code);
         emit(ctx, id->val);
@@ -385,15 +385,15 @@ static void expr_list(ParseFunctionArgs) {
 
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx);
-    ParseFn prefixFn = Rules[prev(sc, ctx).tk].prefix; 
+    ParseFn prefixFn = Rules[prev(sc).tk].prefix; 
     if(prefixFn == NULL) {
         raise(sc->line, "Expected expression, but something else found");
     }
     int can_assign = level <= PREC_ASSIGNMENT; // 是否允许赋值
     prefixFn(PassFunctionArgs);
-    while(level <= Rules[prst(sc, ctx).tk].prec) {
+    while(level <= Rules[prst(sc).tk].prec) {
         next(sc, ctx);
-        ParseFn infixFn = Rules[prev(sc, ctx).tk].infix;
+        ParseFn infixFn = Rules[prev(sc).tk].infix;
         if(infixFn == NULL) {
             return;
         }
@@ -426,7 +426,7 @@ static void stmt_return(ParseFunctionArgs) {
 
 static void stmt_decl(ParseFunctionArgs) {
     int base_type = 0;
-    token_t type = prev(sc, ctx); // 获取当前类型声明
+    token_t type = prev(sc); // 获取当前类型声明
     if(type.tk == TK_INT) {
         base_type = TP_INT; // 整型
     } else if(type.tk == TK_CHAR) {

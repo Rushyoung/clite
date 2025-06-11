@@ -10,7 +10,7 @@
 #include "native.h"
 
 
-int run(context_t ctx){
+void run(context_t ctx){
     uint64_t* stk = NULL; // stack pointer
     uint64_t* bp = NULL;  // base pointer
     uint64_t* sp = NULL;  // stack pointer
@@ -20,12 +20,12 @@ int run(context_t ctx){
     stk = bp = sp = (uint64_t*)malloc(8192 * sizeof(uint64_t)); // allocate stack memory
     if(!stk){
         fprintf(stderr, "Failed to allocate memory for stack\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     for(ip = *pc; ip != 0; ip = *pc){
         pc++;
         if(__args__.debug){
-            printf("%2llu OP=%2llu, sp = %2d, ax = %d\n", pc - ctx->btcode - 1, ip, sp - stk, ax);
+            printf("%2llu OP=%2llu, sp = %2lld, ax = %lld\n", pc - ctx->btcode - 1, ip, sp - stk, ax);
         }
         switch(ip){
             case OP_G_GLO:
@@ -77,7 +77,7 @@ int run(context_t ctx){
             case OP_RET:
                 if(bp == stk){
                     free(stk);
-                    return ax;
+                    exit((uint8_t)ax);
                 }
                 pc = ctx->btcode + *(bp - 1); // 恢复返回地址
                 sp = bp - 3; // 恢复栈指针
@@ -157,7 +157,7 @@ int run(context_t ctx){
                 if(ax == 0){
                     fprintf(stderr, "Division by zero\n");
                     free(stk);
-                    return -1;
+                    exit(EXIT_FAILURE);
                 }
                 sp--;
                 ax = (*sp / ax);
@@ -166,7 +166,7 @@ int run(context_t ctx){
                 if(ax == 0){
                     fprintf(stderr, "Division by zero\n");
                     free(stk);
-                    return -1;
+                    exit(EXIT_FAILURE);
                 }
                 sp--;
                 ax = (*sp % ax);
@@ -183,7 +183,7 @@ int run(context_t ctx){
             default:
                 fprintf(stderr, "Unknown opcode: %llu\n", ip);
                 free(stk);
-                return -1;
+                exit(EXIT_FAILURE);
         }
     }
 }

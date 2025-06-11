@@ -3,6 +3,6 @@
 
 #include "def.h"
 
-int run(context_t ctx);
+void run(context_t ctx);
 
 #endif//__RUNNER_H__
