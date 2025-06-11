@@ -341,7 +341,8 @@ static void expr_variable(ParseFunctionArgs) {
 }
 
 static void expr_call(ParseFunctionArgs) {
-    emit(ctx, OP_PUSH); // 将函数本体压入栈中
+    emit(ctx, OP_SAD);
+    emit(ctx, OP_PUSH);
     int arg_count = 0;  // 函数参数计数
     if(!match(ctx, sc, TK_RI_PAREN)) { // 如果不是空参数列表
         do{
@@ -541,6 +542,7 @@ void parse_global(context_t ctx, scanner sc) {
         uint64_t* addr = blank(ctx); // 留白，函数结束地址
         id->class = TK_FUN;
         id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
+        emit(ctx, OP_FUNC); // 函数入口标记
         SymSetloc(ctx);
         int arg_count = 0;
         while(!match(ctx, sc, TK_RI_PAREN)) { // 解析函数参数

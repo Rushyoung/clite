@@ -56,20 +56,25 @@ int run(context_t ctx){
                 *sp = 0; // 占位符，后续覆盖为函数返回地址
                 sp++;
                 break;
+            case OP_FUNC:// 函数入口标记，什么都不做
+                printf("Function entry at %llu\n", pc - ctx->btcode - 1);
+                break;
             case OP_CALL:
                 bp = sp - *pc;
                 ax = *(bp - 1); // 获取函数地址
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
-                if(is_native(ax)){
+                if(ax < 65535 && *(ctx->btcode + ax) == OP_FUNC){
+                    printf("user function at %lld with %lld args\n", ax, *pc);
+                    pc = ctx->btcode + ax;
+                    break;
+                } else if(is_native(ax)){
                     printf("call to native function at %lld with %lld args\n", ax, *pc);
                     NativeFn fn = (NativeFn)ax;
                     ax = fn(bp, *pc);
                 } else {
-                    printf("call to function at %lld\n", ax);
-                    printf("bp will be set to %llu\n", bp - stk);
-                    printf("Function need return to %llu\n", *(bp - 1));
-                    pc = ctx->btcode + ax; // 跳转到函数地址
-                    break;
+                    fprintf(stderr, "Unknown function call at %lld\n", ax);
+                    free(stk);
+                    exit(EXIT_FAILURE);
                 }
             case OP_RET:
                 if(bp == stk){
