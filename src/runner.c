@@ -54,6 +54,8 @@ int run(context_t ctx){
                 sp++;
                 *sp = (uint64_t)(bp - stk); // 保存当前基指针位置
                 sp++;
+                *sp = ax;
+                sp++;
                 break;
             case OP_FUNC:// 函数入口标记，什么都不做
                 break;

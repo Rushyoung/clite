@@ -341,7 +341,6 @@ static void expr_variable(ParseFunctionArgs) {
 
 static void expr_call(ParseFunctionArgs) {
     emit(ctx, OP_SAD);
-    emit(ctx, OP_PUSH);
     int arg_count = 0;  // 函数参数计数
     if(!match(ctx, sc, TK_RI_PAREN)) { // 如果不是空参数列表
         do{
@@ -373,7 +372,6 @@ static void expr_list(ParseFunctionArgs) {
     emit(ctx, OP_IMM);
     emit(ctx, (uint64_t)buildin_list); // 使用内置列表函数
     emit(ctx, OP_SAD);
-    emit(ctx, OP_PUSH);
     int member_count = 0;
     do{
         member_count++;
