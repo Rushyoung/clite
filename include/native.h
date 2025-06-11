@@ -13,11 +13,14 @@ uint64_t lite_open(NativeFunctionArgs);
 uint64_t lite_read(NativeFunctionArgs);
 uint64_t lite_close(NativeFunctionArgs);
 uint64_t lite_printf(NativeFunctionArgs);
+uint64_t lite_input(NativeFunctionArgs);
 uint64_t lite_malloc(NativeFunctionArgs);
 uint64_t lite_free(NativeFunctionArgs);
 uint64_t lite_memset(NativeFunctionArgs);
 uint64_t lite_memcmp(NativeFunctionArgs);
 uint64_t lite_exit(NativeFunctionArgs);
+
+uint64_t buildin_list(NativeFunctionArgs);  // just use in bytecode
 
 int      is_native(uint64_t func);
 

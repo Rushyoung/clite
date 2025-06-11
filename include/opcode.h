@@ -9,10 +9,10 @@ typedef enum {
     OP_IMM,     // 加载立即数，一个操作数
     OP_JMP,     // 无条件跳转，一个操作数是跳转地址
     OP_JZ,      // 如果为零则跳转
+    OP_OFFSET,  // 下标偏移量，一个操作数是偏移量
     OP_CALL,    // 调用函数，一个操作数是函数参数个数
     OP_RET,     // 返回函数
     OP_FUNC,    // 放在函数片段开头，仅代表这个地址是函数入口，无实际操作
-    OP_LOAD,    // 解地址引用，加载地址指向的值到栈顶
     OP_SAD,     // 保存地址，将当前栈地址保存到栈顶
     OP_PUSH,    // 压栈 = 12
     OP_OR,      // 按位或
@@ -35,6 +35,7 @@ typedef enum {
     OP_READ,    // 读取文件 build-in
     OP_CLOSE,   // 关闭文件 build-in
     OP_PRINTF,  // 打印输出 build-in
+    OP_INPUT,   // 输入 build-in，need free memory
     OP_MALLOC,  // 动态内存分配 build-in
     OP_FREE,    // 释放内存 build-in
     OP_MEMSET,  // 内存设置 build-in

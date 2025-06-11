@@ -60,11 +60,24 @@ uint64_t lite_printf(NativeFunctionArgs) {
         fprintf(stderr, "lite_printf supports up to 6 arguments\n");
         exit(EXIT_FAILURE);
     }
-    for(int i = 0; i < arity; i++){
-        printf("bp[%d] = %llu\n", i, bp[i]);
-    }
     printf(bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
     return 0;
+}
+
+
+uint64_t lite_input(NativeFunctionArgs) {
+    if (arity != 1) {
+        fprintf(stderr, "lite_input requires 1 argument\n");
+        exit(EXIT_FAILURE);
+    }
+    char *buffer = (char *)(bp[0]);
+    ssize_t bytes_read = read(STDIN_FILENO, buffer, 1024);
+    if (bytes_read < 0) {
+        perror("read");
+        exit(EXIT_FAILURE);
+    }
+    buffer[bytes_read] = '\0'; // null-terminate the string
+    return (uint64_t)bytes_read; // return number of bytes read
 }
 
 
@@ -129,11 +142,26 @@ uint64_t lite_exit(NativeFunctionArgs) {
 }
 
 
+uint64_t buildin_list(NativeFunctionArgs) {
+    uint64_t *list = malloc(arity * sizeof(uint64_t));
+    if (!list) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    for (uint64_t i = 0; i < arity; i++) {
+        list[i] = bp[i];
+    }
+    return (uint64_t)list; // return pointer to the list
+}
+
+
 int is_native(uint64_t func) {
     return func == lite_close ||
            func == lite_open ||
            func == lite_read ||
            func == lite_printf ||
+           func == lite_input ||
+           func == buildin_list ||
            func == lite_malloc ||
            func == lite_free ||
            func == lite_memset ||

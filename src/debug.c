@@ -90,6 +90,7 @@ char* op_name[64] = {
     [OP_READ] = "READ_FILE", 
     [OP_CLOSE] = "CLOSE_FILE", 
     [OP_PRINTF] = "PRINTF", 
+    [OP_INPUT] = "INPUT",
     [OP_MALLOC] = "MALLOC", 
     [OP_FREE] = "FREE", 
     [OP_MEMSET] = "MEMSET", 

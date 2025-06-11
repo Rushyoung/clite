@@ -27,7 +27,7 @@ context_t InitContext(){
 
     char* builtin = 
     "char else enum for if int return sizeof while void main "
-    "open read close printf malloc free memset memcmp exit";
+    "open read close printf input malloc free memset memcmp exit";
     scanner keyword = InitScanner(106, builtin);
 
     for(int ids = TK_CHAR; ids <= TK_VOID; ids++){
@@ -41,7 +41,7 @@ context_t InitContext(){
     ctx->main_id = ctx->sym_idx - 1;          // store main function index
 
     NativeFn native_functions[] = {
-        lite_open, lite_read, lite_close, lite_printf,
+        lite_open, lite_read, lite_close, lite_printf, lite_input,
         lite_malloc, lite_free, lite_memset, lite_memcmp, lite_exit
     };
     for(int ids = OP_OPEN; ids <= OP_EXIT; ids++){
