@@ -54,18 +54,15 @@ int run(context_t ctx){
                 sp++;
                 break;
             case OP_FUNC:// 函数入口标记，什么都不做
-                printf("Function entry at %llu\n", pc - ctx->btcode - 1);
                 break;
             case OP_CALL:
                 bp = sp - *pc;
                 ax = *(bp - 1); // 获取函数地址
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
                 if(ax < 65535 && *(ctx->btcode + ax) == OP_FUNC){
-                    printf("user function at %lld with %lld args\n", ax, *pc);
                     pc = ctx->btcode + ax;
                     break;
                 } else if(is_native(ax)){
-                    printf("call to native function at %lld with %lld args\n", ax, *pc);
                     NativeFn fn = (NativeFn)ax;
                     ax = fn(bp, *pc);
                 } else {
@@ -79,7 +76,6 @@ int run(context_t ctx){
                     free(stk);
                     return ax;
                 }
-                printf("return from function, ax = %llu\n", ax);
                 pc = ctx->btcode + *(bp - 1); // 恢复返回地址
                 sp = bp - 3; // 恢复栈指针
                 bp = stk + *(bp - 2); // 恢复基指针
@@ -95,7 +91,6 @@ int run(context_t ctx){
                 }
                 break;
             case OP_PUSH:
-                printf("push %d to stack %d\n", ax, sp - stk);
                 *sp = ax;
                 sp++;
                 break;
@@ -125,7 +120,6 @@ int run(context_t ctx){
                 break;
             case OP_EQU:
                 sp--;
-                printf("checking %d == %d\n", *sp, ax);
                 ax = (*sp == ax);
                 break;
             case OP_GRT:

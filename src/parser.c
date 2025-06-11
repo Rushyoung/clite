@@ -10,10 +10,15 @@
 
 #include "scanner.h"
 #include "token.h"
-#include "debug.h"
 
-#define log(s) printf("At %s:%d\n%s: ", __FUNCTION__, __LINE__, #s);s
-#define PRLINE printf("line: %lld,", sc->line);
+#define raise(l, ...) ({ \
+    printf("line: %lld\n", (l)); \
+    printf("    : "); \
+    printf(__VA_ARGS__); \
+    printf("\n"); \
+    exit(EXIT_FAILURE); \
+})
+
 // 定义解析函数
 static void expr_number(ParseFunctionArgs);
 static void expr_unary(ParseFunctionArgs);
@@ -98,9 +103,7 @@ static int match(context_t ctx, scanner sc, TkType tk) {
 static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
     token_t current = prst(sc, ctx);
     if(current.tk != tk) {
-        printf("line: %lld, ", sc->line);
-        printf(msg);
-        exit(EXIT_FAILURE);
+        raise(sc->line, msg);
     }
     next(sc, ctx); // 跳过匹配的 token
 }
@@ -120,9 +123,7 @@ static int __ctype(context_t ctx, scanner sc) {
             type = TP_VOID;
             break;
         default:
-        printf("line: %lld,",sc->line);
-            printf("Expected type declaration (int, char, void)");
-            exit(EXIT_FAILURE);
+            raise(sc->line, "Expected type declaration (int, char, void)");
     }
     next(sc, ctx); // 跳过类型声明
     return type; // 返回解析的类型
@@ -185,8 +186,7 @@ static void expr_unary(ParseFunctionArgs) {
             emit(ctx, OP_NOT); // 逻辑非，生成逻辑非指令
             break;
         default:
-            printf("Unexpected unary operator: %d", current.tk);
-            exit(EXIT_FAILURE);
+            raise(sc->line, "Unexpected unary operator");
     }
 }
 
@@ -195,8 +195,7 @@ static void expr_preinc(ParseFunctionArgs) {
     expect(ctx, sc, TK_ID, "Expected identifier after increment/decrement operator");
     token_t* id = SymFind(ctx, prev(sc, ctx));
     if(id->class == 0) {
-        printf("line:%lld,Identifier not declared before use", sc->line);
-        exit(EXIT_FAILURE);
+        raise(sc->line, "Identifier not declared before use");
     }
     uint64_t op_set = OP_S_GLO;
     uint64_t op_get = OP_G_GLO;
@@ -301,11 +300,9 @@ static void expr_variable(ParseFunctionArgs) {
     token_t tk = prev(sc, ctx);     // 获取当前标识符
     token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
     if(id->class == 0){
-        printf("line:%lld, Identifier not declared before use", sc->line);
-        exit(EXIT_FAILURE);
+        raise(sc->line, "Identifier not declared before use");
     }
     if(id->class == TK_FUN || id->class == TK_SYS) {
-        printf("line:%lld, Identifier %.*s is a function\n", sc->line, (int)id->len, id->name);
         emit(ctx, OP_IMM);
         emit(ctx, id->val); // 函数地址
         return;
@@ -362,8 +359,7 @@ static void expr_offset(ParseFunctionArgs) {
     emit(ctx, OP_PUSH);
     parse_expr(ctx, sc, PREC_OFFSET); // 解析偏移表达式
     if(!match(ctx, sc, TK_RI_BRCKT)) {
-        printf("Expected ']' after array offset");
-        exit(EXIT_FAILURE);
+        raise(sc->line, "Expected ']' after array offset");
     }
     emit(ctx, OP_OFFSET); // 生成数组偏移指令
 }
@@ -393,9 +389,7 @@ void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx);
     ParseFn prefixFn = Rules[prev(sc, ctx).tk].prefix; 
     if(prefixFn == NULL) {
-        log(DumpToken(ctx, prev(sc, ctx)));
-        printf("Expected expression, but something else found");
-        exit(EXIT_FAILURE);
+        raise(sc->line, "Expected expression, but something else found");
     }
     int can_assign = level <= PREC_ASSIGNMENT; // 是否允许赋值
     prefixFn(PassFunctionArgs);
@@ -442,21 +436,18 @@ static void stmt_decl(ParseFunctionArgs) {
     } else if(type.tk == TK_VOID) {
         base_type = TP_VOID; // 空类型
     } else {
-        printf("Expected type declaration (int, char, void)");
-        exit(EXIT_FAILURE);
+        raise(sc->line, "Expected type declaration (int, char, void)");
     }
     int real_type = base_type;
     do{
         token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
         if(id->class == TK_LOC) {
-            printf("Variable '%.*s' already defined", id->name, id->len);
-            exit(EXIT_FAILURE);
+            raise(sc->line, "Variable '%.*s' already defined", id->name, id->len);
         } else if(id->class == TK_GLO || id->class == TK_FUN) {
             id = SymAdd(ctx, *id); // 如果是全局变量或函数，则添加到符号表
         }
         if(real_type == TP_VOID) {
-            printf("Variable '%.*s' cannot be of type void", id->name, id->len);
-            exit(EXIT_FAILURE);
+            raise(sc->line, "Variable '%.*s' cannot be of type void", id->name, id->len);
         }
         id->type = real_type;
         id->class = TK_LOC;
@@ -556,7 +547,6 @@ void parse_stmt(context_t ctx, scanner sc) {
     } else {
         stmt_expr(ctx, sc, 1); // 解析表达式语句
     }
-    printf("end of statement\n");
 }
 
 void parse_global(context_t ctx, scanner sc) {
@@ -565,12 +555,10 @@ void parse_global(context_t ctx, scanner sc) {
     real_type = base_type = __ctype(ctx, sc); // 解析类型声明
     token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
     if(id->class == TK_GLO || id->class == TK_FUN) {
-        printf("Global variable '%.*s' already defined", id->name, id->len);
-        exit(EXIT_FAILURE);
+        raise(sc->line, "Global variable '%.*s' already defined", id->name, id->len);
     }
     id->type = real_type; // 设置变量类型
     if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
-        printf("line: %lld, Function declaration found\n", sc->line);
         emit(ctx, OP_JMP);
         uint64_t* addr = blank(ctx); // 留白，函数结束地址
         id->class = TK_FUN;
@@ -585,8 +573,7 @@ void parse_global(context_t ctx, scanner sc) {
             int arg_type = __ctype(ctx, sc); // 解析参数类型
             token_t* arg_id = __identifier(ctx, sc, &arg_type); // 解析参数标识符
             if(arg_id->class == TK_LOC) {
-                printf("Function argument '%.*s' already defined", arg_id->name, arg_id->len);
-                exit(EXIT_FAILURE);
+                raise(sc->line, "Function argument '%.*s' already defined in this scope", arg_id->name, arg_id->len);
             } else if(arg_id->class == TK_GLO || arg_id->class == TK_FUN) {
                 arg_id = SymAdd(ctx, *arg_id); // 如果是全局变量或函数，则添加到符号表
             }
@@ -617,13 +604,11 @@ void parse_global(context_t ctx, scanner sc) {
         if(match(ctx, sc, TK_SEMICOLON)){
             return;
         } else if(!match(ctx, sc, TK_COMMA)) {
-            printf("Expected ',' or ';' after global variable declaration");
-            exit(EXIT_FAILURE);
+            raise(sc->line, "Expected ',' or ';' after global variable declaration");
         }
         id = __identifier(ctx, sc, &real_type); // 继续解析下一个标识符
         if(id->class == TK_GLO || id->class == TK_FUN) {
-            printf("Global variable '%.*s' already defined", id->name, id->len);
-            exit(EXIT_FAILURE);
+            raise(sc->line, "Global variable '%.*s' already defined", id->name, id->len);
         }
         id->type = real_type; // 设置变量类型
         goto define_loop;
@@ -638,8 +623,7 @@ void compile(context_t ctx, scanner sc) {
     }
 
     if(ctx->sym[ctx->main_id].class != TK_FUN) {
-        printf("Main function not defined");
-        exit(EXIT_FAILURE);
+        raise(sc->line, "Main function not defined");
     }
 
     emit(ctx, OP_JMP);
