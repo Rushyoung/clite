@@ -48,12 +48,9 @@ int run(context_t ctx){
                 pc++;
                 break;
             case OP_SAD:
-                // 保存当前栈地址到栈顶
-                *sp = (uint64_t)(sp - stk);
+                *sp = (uint64_t)(sp - stk); // 保存当前栈地址到栈顶
                 sp++;
                 *sp = (uint64_t)(bp - stk); // 保存当前基指针位置
-                sp++;
-                *sp = 0; // 占位符，后续覆盖为函数返回地址
                 sp++;
                 break;
             case OP_FUNC:// 函数入口标记，什么都不做
