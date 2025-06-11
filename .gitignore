@@ -7,3 +7,5 @@ hello.c
 /cmake-build-debug/
 /.cache/
 /.idea
+
+*.exe
