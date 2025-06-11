@@ -40,11 +40,18 @@ char* load(const char* file_name, size_t* file_size){
 }
 
 
-int main(){
+int main(int argc, char **argv){
     context_t ctx = InitContext();
-
+	char* file_name;
     size_t file_size = 0;
-    char*  file_name = ".\\hello.c";
+    if(argc < 2){
+        fprintf(stderr, "Usage: %s <source_file>\n", argv[0]);
+        return 1;
+    }
+    else{
+        file_name = argv[1];
+    }
+
     char*  file_code = load(file_name, &file_size);
 
     scanner sc = InitScanner(file_size, file_code);
