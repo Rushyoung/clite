@@ -1,0 +1,25 @@
+#ifndef __NATIVE_H__
+#define __NATIVE_H__
+
+#include <stdint.h>
+
+#include "opcode.h"
+
+#define NativeFunctionArgs uint64_t *bp, uint64_t arity
+
+typedef uint64_t (*NativeFn)(NativeFunctionArgs);
+
+uint64_t lite_open(NativeFunctionArgs);
+uint64_t lite_read(NativeFunctionArgs);
+uint64_t lite_close(NativeFunctionArgs);
+uint64_t lite_printf(NativeFunctionArgs);
+uint64_t lite_malloc(NativeFunctionArgs);
+uint64_t lite_free(NativeFunctionArgs);
+uint64_t lite_memset(NativeFunctionArgs);
+uint64_t lite_memcmp(NativeFunctionArgs);
+uint64_t lite_exit(NativeFunctionArgs);
+
+int      is_native(uint64_t func);
+
+
+#endif//__NATIVE_H__

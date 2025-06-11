@@ -302,6 +302,12 @@ static void expr_variable(ParseFunctionArgs) {
         printf("line:%lld, Identifier not declared before use", sc->line);
         exit(EXIT_FAILURE);
     }
+    if(id->class == TK_FUN || id->class == TK_SYS) {
+        printf("line:%lld, Identifier %.*s is a function\n", sc->line, (int)id->len, id->name);
+        emit(ctx, OP_IMM);
+        emit(ctx, id->val); // 函数地址
+        return;
+    }
     int op_set_code = OP_S_GLO; // 默认操作码为全局变量存储
     int op_get_code = OP_G_GLO;
     if(id >= ctx->sym_loc) { // 如果是局部变量
@@ -335,12 +341,8 @@ static void expr_variable(ParseFunctionArgs) {
 }
 
 static void expr_call(ParseFunctionArgs) {
-    token_t tk = idnt(sc, ctx); // 获取上一个标识符
-    token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
-    if(id->class == TK_FUN) {
-        emit(ctx, OP_SAD);   // 自定义函数调用，需要保存当前地址
-    }
-    int arg_count = 0; // 函数参数计数
+    emit(ctx, OP_PUSH); // 将函数本体压入栈中
+    int arg_count = 0;  // 函数参数计数
     if(!match(ctx, sc, TK_RI_PAREN)) { // 如果不是空参数列表
         do{
             arg_count++;
@@ -349,21 +351,8 @@ static void expr_call(ParseFunctionArgs) {
         } while(match(ctx, sc, TK_COMMA)); // 处理多个参数
         expect(ctx, sc, TK_RI_PAREN, "Expected ')' after function arguments"); // 确保以右括号结尾
     }
-    if(id->class == TK_FUN) {
-        emit(ctx, OP_IMM);
-        emit(ctx, id->val);     // 函数地址
-        emit(ctx, OP_CALL);     // 生成函数调用指令
-        emit(ctx, arg_count);   // 使用参数计数
-    } else if (id->class == TK_SYS) {
-        emit(ctx, id->val); // 使用系统调用的值
-        emit(ctx, arg_count); // 使用参数计数
-    } else {
-        PRLINE
-        printf("Function call on non-function identifier %.*s\n",(int)id->len , id->name);
-        DumpSymbolTable(ctx);
-
-        exit(EXIT_FAILURE);
-    }
+    emit(ctx, OP_CALL);     // 生成函数调用指令
+    emit(ctx, arg_count);   // 使用参数计数
 }
 
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {

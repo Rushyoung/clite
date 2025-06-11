@@ -7,6 +7,7 @@
 
 #include "def.h"
 #include "opcode.h"
+#include "native.h"
 
 
 int run(context_t ctx){
@@ -57,12 +58,19 @@ int run(context_t ctx){
                 break;
             case OP_CALL:
                 bp = sp - *pc;
-                printf("call to function at %llu\n", ax);
-                printf("bp will be set to %llu\n", bp - stk);
+                ax = *(bp - 1); // 获取函数地址
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
-                printf("Function need return to %llu\n", *(bp - 1));
-                pc = ctx->btcode + ax; // 跳转到函数地址
-                break;
+                if(is_native(ax)){
+                    printf("call to native function at %d with %d args\n", ax, *pc);
+                    NativeFn fn = (NativeFn)ax;
+                    ax = fn(bp, *pc);
+                } else {
+                    printf("call to function at %d\n", ax);
+                    printf("bp will be set to %llu\n", bp - stk);
+                    printf("Function need return to %llu\n", *(bp - 1));
+                    pc = ctx->btcode + ax; // 跳转到函数地址
+                    break;
+                }
             case OP_RET:
                 if(bp == stk){
                     fprintf(stderr, "Return from main function\n");
@@ -161,27 +169,6 @@ int run(context_t ctx){
             case OP_STR:
                 ax = ctx->heap + ax; // convert to string address
                 break;
-            case OP_PRINTF:
-                printf("printf called with %d arguments\n", *pc);
-                sp -= *pc; // pop arguments
-                ax = printf(sp[0], sp[1], sp[2], sp[3], sp[4], sp[5]);
-                pc++;
-                break;
-            case OP_MALLOC:
-                if(*pc != 1){
-                    fprintf(stderr, "malloc() expects 1 argument, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-                ax = malloc(ax);
-                break;
-            case OP_FREE:
-                if(*pc != 1){
-                    fprintf(stderr, "free() expects 1 argument, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-
             default:
                 fprintf(stderr, "Unknown opcode: %llu\n", ip);
                 free(stk);

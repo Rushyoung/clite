@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "native.h"
 #include "opcode.h"
 #include "scanner.h"
+
 #include "token.h"
 
 
@@ -38,11 +40,15 @@ context_t InitContext(){
     ctx->sym[ctx->sym_idx - 1].val = 0;
     ctx->main_id = ctx->sym_idx - 1;          // store main function index
 
+    NativeFn native_functions[] = {
+        lite_open, lite_read, lite_close, lite_printf,
+        lite_malloc, lite_free, lite_memset, lite_memcmp, lite_exit
+    };
     for(int ids = OP_OPEN; ids <= OP_EXIT; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system calls
         ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all system calls return int
-        ctx->sym[ctx->sym_idx - 1].val   = ids;    // system call value
+        ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids - OP_OPEN];
     }
 
     free(keyword);
