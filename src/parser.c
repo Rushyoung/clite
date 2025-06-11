@@ -280,16 +280,16 @@ static void expr_binary(ParseFunctionArgs) {
 
 static void expr_and(ParseFunctionArgs) {
     emit(ctx, OP_JZ);
-    uint64_t* addr = black(ctx); // 留白，跳转地址
+    uint64_t* addr = blank(ctx); // 留白，跳转地址
     parse_expr(ctx, sc, PREC_AND);
     patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充跳转地址
 }
 
 static void expr_or(ParseFunctionArgs) {
     emit(ctx, OP_JZ);
-    uint64_t* addr_else = black(ctx); // 留白，跳转到 else 分支
+    uint64_t* addr_else = blank(ctx); // 留白，跳转到 else 分支
     emit(ctx, OP_JMP);
-    uint64_t* addr_end = black(ctx);  // 留白，跳转到结束
+    uint64_t* addr_end = blank(ctx);  // 留白，跳转到结束
     patch(ctx, addr_else, ctx->btcode_cur - ctx->btcode); // 填充 else 分支跳转地址
     parse_expr(ctx, sc, PREC_OR); // 解析右侧表达式
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode); // 填充结束跳转地址
@@ -445,7 +445,7 @@ static void stmt_while(ParseFunctionArgs) {
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
     emit(ctx, OP_JZ);
-    uint64_t* addr_end = black(ctx);
+    uint64_t* addr_end = blank(ctx);
     parse_stmt(ctx, sc);
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode);
@@ -466,11 +466,11 @@ static void stmt_for(ParseFunctionArgs) {
         parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析条件表达式
         expect(ctx, sc, TK_SEMICOLON, "Expected ';' after 'for' condition");
         emit(ctx, OP_JZ);
-        addr_end = black(ctx); // 留白，跳转到循环结束
+        addr_end = blank(ctx); // 留白，跳转到循环结束
     }
     if(!match(ctx, sc, TK_RI_PAREN)) {
         emit(ctx, OP_JMP);
-        uint64_t* addr_body = black(ctx);
+        uint64_t* addr_body = blank(ctx);
         uint64_t* addr_inc = ctx->btcode_cur;
         parse_expr(ctx, sc, PREC_ASSIGNMENT);
         expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'for' increment expression");
@@ -492,12 +492,12 @@ static void stmt_if(ParseFunctionArgs){
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'if' condition");
     emit(ctx, OP_JZ);
-    uint64_t* if_end = black(ctx);
+    uint64_t* if_end = blank(ctx);
     parse_stmt(ctx, sc);
     //if end
     if(match(ctx, sc, TK_ELSE)){
         emit(ctx, OP_JMP);
-        uint64_t* el_end = black(ctx);
+        uint64_t* el_end = blank(ctx);
         patch(ctx, if_end, ctx->btcode_cur - ctx->btcode);
         parse_stmt(ctx, sc);
         patch(ctx, el_end, ctx->btcode_cur - ctx->btcode);
@@ -538,7 +538,7 @@ void parse_global(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
         printf("line: %lld, Function declaration found\n", sc->line);
         emit(ctx, OP_JMP);
-        uint64_t* addr = black(ctx); // 留白，函数结束地址
+        uint64_t* addr = blank(ctx); // 留白，函数结束地址
         id->class = TK_FUN;
         id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
         SymSetloc(ctx);
@@ -599,7 +599,7 @@ void parse_global(context_t ctx, scanner sc) {
 void compile(context_t ctx, scanner sc) {
     next(sc, ctx); // 开始解析，扫描第一个token
     while(!match(ctx, sc, 0)) {
-        parse_global(ctx, sc);
+        parse_global(ctx, sc);// 全局声明
     }
 
     if(ctx->sym[ctx->main_id].class != TK_FUN) {

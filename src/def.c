@@ -74,7 +74,7 @@ void emit(context_t ctx, uint64_t op){
     ctx->btcode_cur++;
 }
 
-uint64_t* black(context_t ctx){
+uint64_t* blank(context_t ctx){
     if(ctx->btcode_cur == ctx->btcode){
         perror("Bytecode buffer underflow");
         exit(EXIT_FAILURE);
