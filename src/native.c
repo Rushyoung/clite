@@ -10,12 +10,13 @@
 
 
 uint64_t lite_open(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_open requires 1 argument\n");
+    if (arity != 2) {
+        fprintf(stderr, "lite_open requires 2 argument\n");
         exit(EXIT_FAILURE);
     }
     char *filename = (char *)(bp[0]);
-    int fd = open(filename, O_RDONLY);
+    int flags = (int)(bp[1]);
+    int fd = open(filename, flags);
     if (fd < 0) {
         perror("open");
         exit(EXIT_FAILURE);
@@ -25,8 +26,8 @@ uint64_t lite_open(NativeFunctionArgs) {
 
 
 uint64_t lite_read(NativeFunctionArgs) {
-    if (arity != 2) {
-        fprintf(stderr, "lite_read requires 2 arguments\n");
+    if (arity != 3) {
+        fprintf(stderr, "lite_read requires 3 arguments\n");
         exit(EXIT_FAILURE);
     }
     int fd = (int)(bp[0]);
