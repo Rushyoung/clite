@@ -5,9 +5,10 @@
 #include <stdlib.h>
 
 #include "def.h"
+#include "native.h"
 #include "opcode.h"
-#include "scanner.h"
 
+#include "scanner.h"
 #include "token.h"
 #include "debug.h"
 
@@ -24,6 +25,7 @@ static void expr_or(ParseFunctionArgs);
 static void expr_preinc(ParseFunctionArgs);
 static void expr_call(ParseFunctionArgs);
 static void expr_offset(ParseFunctionArgs);
+static void expr_list(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
@@ -75,7 +77,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_DEC]       = {expr_preinc,     NULL,           PREC_NONE },
     [TK_LE_PAREN]  = {NULL,            expr_call,      PREC_CALL },
     [TK_RI_PAREN]  = {NULL,            NULL,           PREC_NONE },
-    [TK_LE_BRACE]  = {NULL,            NULL,           PREC_NONE },
+    [TK_LE_BRACE]  = {expr_list,       NULL,           PREC_NONE },
     [TK_RI_BRACE]  = {NULL,            NULL,           PREC_NONE },
     [TK_LE_BRCKT]  = {NULL,            expr_offset,    PREC_OFFSET },
     [TK_RI_BRCKT]  = {NULL,            NULL,           PREC_NONE },
@@ -364,6 +366,27 @@ static void expr_offset(ParseFunctionArgs) {
         exit(EXIT_FAILURE);
     }
     emit(ctx, OP_OFFSET); // 生成数组偏移指令
+}
+
+static void expr_list(ParseFunctionArgs) {
+    if(match(ctx, sc, TK_RI_BRACE)) {
+        emit(ctx, OP_IMM);
+        emit(ctx, 0); // 空列表
+        return;
+    }
+    emit(ctx, OP_IMM);
+    emit(ctx, (uint64_t)buildin_list); // 使用内置列表函数
+    emit(ctx, OP_SAD);
+    emit(ctx, OP_PUSH);
+    int member_count = 0;
+    do{
+        member_count++;
+        parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析列表成员
+        emit(ctx, OP_PUSH); // 将成员压入栈中
+    }while(match(ctx, sc, TK_COMMA)); // 处理多个成员
+    expect(ctx, sc, TK_RI_BRACE, "Expected '}' after list"); // 确保以右大括号结尾
+    emit(ctx, OP_CALL);
+    emit(ctx, member_count); // 使用成员计数
 }
 
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
