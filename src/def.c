@@ -17,12 +17,10 @@ context_t InitContext(){
     ctx->sym_idx = 0;
     ctx->sym_loc = NULL;
 
-    ctx->heap = malloc(65536);
-    memset(ctx->heap, 0, 65536);
+    ctx->heap = calloc(65536, 1);
     ctx->heap_cur = 0;
 
-    ctx->btcode = malloc(65536 * sizeof(uint64_t));
-    memset(ctx->btcode, 0, 65536 * sizeof(uint64_t));
+    ctx->btcode = calloc(65536 * sizeof(uint64_t), 1);
     ctx->btcode_cur = ctx->btcode;
 
     char* builtin = 
