@@ -61,11 +61,11 @@ int run(context_t ctx){
                 ax = *(bp - 1); // 获取函数地址
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
                 if(is_native(ax)){
-                    printf("call to native function at %d with %d args\n", ax, *pc);
+                    printf("call to native function at %lld with %lld args\n", ax, *pc);
                     NativeFn fn = (NativeFn)ax;
                     ax = fn(bp, *pc);
                 } else {
-                    printf("call to function at %d\n", ax);
+                    printf("call to function at %lld\n", ax);
                     printf("bp will be set to %llu\n", bp - stk);
                     printf("Function need return to %llu\n", *(bp - 1));
                     pc = ctx->btcode + ax; // 跳转到函数地址
