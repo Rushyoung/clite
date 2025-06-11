@@ -9,12 +9,12 @@ typedef enum {
     OP_IMM,     // 加载立即数，一个操作数
     OP_JMP,     // 无条件跳转，一个操作数是跳转地址
     OP_JZ,      // 如果为零则跳转
-    OP_OFFSET,  // 下标偏移量，一个操作数是偏移量
     OP_CALL,    // 调用函数，一个操作数是函数参数个数
     OP_RET,     // 返回函数
     OP_FUNC,    // 放在函数片段开头，仅代表这个地址是函数入口，无实际操作
     OP_SAD,     // 保存地址，将当前栈地址保存到栈顶
     OP_PUSH,    // 压栈 = 12
+    OP_OFFSET,  // 下标偏移量
     OP_OR,      // 按位或
     OP_XOR,     // 按位异或
     OP_AND,     // 按位与
@@ -23,7 +23,7 @@ typedef enum {
     OP_GRT,     // 大于
     OP_SHL,     // 左移
     OP_SHR,     // 右移
-    OP_ADD,     // 加法 = 21
+    OP_ADD,     // 加法 = 22
     OP_SUB,     // 减法
     OP_MUL,     // 乘法
     OP_DIV,     // 除法
@@ -31,7 +31,7 @@ typedef enum {
     OP_NOT,     // 逻辑非
     OP_NEGATE,  // 逻辑负
     OP_STR,     // 转为字符串
-    OP_OPEN,    // 打开文件 build-in = 29
+    OP_OPEN,    // 打开文件 build-in = 30
     OP_READ,    // 读取文件 build-in
     OP_CLOSE,   // 关闭文件 build-in
     OP_PRINTF,  // 打印输出 build-in

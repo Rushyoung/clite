@@ -48,10 +48,7 @@ int main(){
     char*  file_code = load(file_name, &file_size);
 
     scanner sc = InitScanner(file_size, file_code);
-    //DumpScanner(sc);
     compile(ctx, sc);
-    printf("printf function is %d\n", ctx->sym[14].val);
-    printf("main function in %d\n", ctx->sym[ctx->main_id].val);
     DumpBtcode(ctx);
     run(ctx);
     return 0;

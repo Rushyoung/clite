@@ -77,7 +77,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_RI_PAREN]  = {NULL,            NULL,           PREC_NONE },
     [TK_LE_BRACE]  = {NULL,            NULL,           PREC_NONE },
     [TK_RI_BRACE]  = {NULL,            NULL,           PREC_NONE },
-    [TK_LE_BRCKT]  = {NULL,            NULL,           PREC_NONE },
+    [TK_LE_BRCKT]  = {NULL,            expr_offset,    PREC_OFFSET },
     [TK_RI_BRCKT]  = {NULL,            NULL,           PREC_NONE },
     [TK_COMMA]     = {NULL,            NULL,           PREC_NONE },
     [TK_SEMICOLON] = {NULL,            NULL,           PREC_NONE },
@@ -354,6 +354,16 @@ static void expr_call(ParseFunctionArgs) {
     }
     emit(ctx, OP_CALL);     // 生成函数调用指令
     emit(ctx, arg_count);   // 使用参数计数
+}
+
+static void expr_offset(ParseFunctionArgs) {
+    emit(ctx, OP_PUSH);
+    parse_expr(ctx, sc, PREC_OFFSET); // 解析偏移表达式
+    if(!match(ctx, sc, TK_RI_BRCKT)) {
+        printf("Expected ']' after array offset");
+        exit(EXIT_FAILURE);
+    }
+    emit(ctx, OP_OFFSET); // 生成数组偏移指令
 }
 
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {

@@ -66,6 +66,7 @@ char* op_name[64] = {
     [OP_JMP] = "OP_JMP",
     [OP_JZ] = "OP_JZ",
     [OP_CALL] = "OP_CALL",
+    [OP_OFFSET] = "OP_OFFSET",
     [OP_FUNC] = "OP_FUNC",
     [OP_RET] = "OP_RET",
     [OP_SAD] = "OP_SAD",
