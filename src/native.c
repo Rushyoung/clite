@@ -76,7 +76,7 @@ uint64_t lite_input(NativeFunctionArgs) {
         perror("read");
         exit(EXIT_FAILURE);
     }
-    buffer[bytes_read] = '\0'; // null-terminate the string
+    buffer[bytes_read - 1] = '\0'; // null-terminate the string
     return (uint64_t)bytes_read; // return number of bytes read
 }
 
