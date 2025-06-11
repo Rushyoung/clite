@@ -12,7 +12,7 @@
 #include "debug.h"
 
 #define log(s) printf("At %s:%d\n%s: ", __FUNCTION__, __LINE__, #s);s
-
+#define PRLINE printf("line: %lld,", sc->line);
 // 定义解析函数
 static void expr_number(ParseFunctionArgs);
 static void expr_unary(ParseFunctionArgs);
@@ -96,6 +96,7 @@ static int match(context_t ctx, scanner sc, TkType tk) {
 static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
     token_t current = prst(sc, ctx);
     if(current.tk != tk) {
+        printf("line: %lld, ", sc->line);
         printf(msg);
         exit(EXIT_FAILURE);
     }
@@ -117,6 +118,7 @@ static int __ctype(context_t ctx, scanner sc) {
             type = TP_VOID;
             break;
         default:
+        printf("line: %lld,",sc->line);
             printf("Expected type declaration (int, char, void)");
             exit(EXIT_FAILURE);
     }
@@ -191,7 +193,7 @@ static void expr_preinc(ParseFunctionArgs) {
     expect(ctx, sc, TK_ID, "Expected identifier after increment/decrement operator");
     token_t* id = SymFind(ctx, prev(sc, ctx));
     if(id->class == 0) {
-        printf("Identifier not declared before use");
+        printf("line:%lld,Identifier not declared before use", sc->line);
         exit(EXIT_FAILURE);
     }
     uint64_t op_set = OP_S_GLO;
@@ -297,7 +299,7 @@ static void expr_variable(ParseFunctionArgs) {
     token_t tk = prev(sc, ctx);     // 获取当前标识符
     token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
     if(id->class == 0){
-        printf("Identifier not declared before use");
+        printf("line:%lld, Identifier not declared before use", sc->line);
         exit(EXIT_FAILURE);
     }
     int op_set_code = OP_S_GLO; // 默认操作码为全局变量存储
@@ -356,7 +358,10 @@ static void expr_call(ParseFunctionArgs) {
         emit(ctx, id->val); // 使用系统调用的值
         emit(ctx, arg_count); // 使用参数计数
     } else {
-        printf("Function call on non-function identifier");
+        PRLINE
+        printf("Function call on non-function identifier %.*s\n",(int)id->len , id->name);
+        DumpSymbolTable(ctx);
+
         exit(EXIT_FAILURE);
     }
 }
@@ -542,7 +547,7 @@ void parse_global(context_t ctx, scanner sc) {
     }
     id->type = real_type; // 设置变量类型
     if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
-        printf("Function declaration found\n");
+        printf("line: %lld, Function declaration found\n", sc->line);
         emit(ctx, OP_JMP);
         uint64_t* addr = black(ctx); // 留白，函数结束地址
         id->class = TK_FUN;

@@ -4,6 +4,7 @@
 
 #include "def.h"
 #include "opcode.h"
+#include "token.h"
 
 char* token_name[256] = {
     [TK_NUM] = "TK_NUM",
@@ -158,4 +159,79 @@ void DumpBtcode(context_t ctx){
             printf("\n");
         }
     }
+}
+
+void DumpSymbolTable(context_t ctx) { // Renamed from DumpSymtable to match previous suggestion
+    if (ctx == NULL || ctx->sym == NULL) {
+        printf("Symbol table is NULL.\n");
+        return;
+    }
+    printf("\n--- Symbol Table Dump (Size: %zu) ---\n", ctx->sym_idx);
+    printf("Idx | TkType    | Name (Len)           | Class     | CType        | Hash       | Val (Offset/Addr)\n");
+
+    for (size_t i = 0; i < ctx->sym_idx; ++i) {
+        token_t s = ctx->sym[i];
+        char name_display_buffer[25]; // Buffer for displaying name and length
+
+        printf("%3zu | ", i);
+
+        // 打印 TkType
+        printf("%-9s | ", (s.tk >= TK_NUM && s.tk < 256 && token_name[s.tk]) ? token_name[s.tk] : "OTHER_TK");
+
+        // 打印 Name 和 Len
+        if (s.name != NULL && s.len > 0) {
+            snprintf(name_display_buffer, sizeof(name_display_buffer), "%.*s (%zu)", (int)s.len, s.name, s.len);
+        } else {
+            snprintf(name_display_buffer, sizeof(name_display_buffer), "-");
+        }
+        printf("%-20s | ", name_display_buffer);
+
+        // 打印 Class
+        printf("%-9s | ", (s.class >= TK_NUM && s.class < 256 && token_name[s.class]) ? token_name[s.class] : (s.class == 0 ? "NO_CLASS" : "OTHER_CLS"));
+        
+        // 打印 CType (type 字段) - 直接在此处处理
+        int ctype_val = s.type;
+        int base_type = ctype_val;
+        int ptr_level = 0;
+        char ctype_str_buffer[32]; // 局部缓冲区用于构建类型字符串
+        char* ctype_ptr = ctype_str_buffer;
+        int remaining_space = sizeof(ctype_str_buffer);
+
+        while (base_type >= TP_PTR) {
+            base_type -= TP_PTR;
+            ptr_level++;
+        }
+
+        const char* base_type_name;
+        switch (base_type) {
+            case TP_VOID: base_type_name = "void"; break;
+            case TP_CHAR: base_type_name = "char"; break;
+            case TP_INT:  base_type_name = "int";  break;
+            default:      base_type_name = "unk_base"; break;
+        }
+        
+        int written = snprintf(ctype_ptr, remaining_space, "%s", base_type_name);
+        if (written > 0 && written < remaining_space) {
+            ctype_ptr += written;
+            remaining_space -= written;
+        } else {
+            // 如果基础类型名称写入失败或填满了缓冲区，则截断
+            ctype_str_buffer[sizeof(ctype_str_buffer)-1] = '\0';
+        }
+
+        for (int k = 0; k < ptr_level && remaining_space > 1; ++k) {
+            *ctype_ptr++ = '*';
+            remaining_space--;
+        }
+        *ctype_ptr = '\0'; // 确保空终止
+
+        printf("%-12s | ", ctype_str_buffer);
+        
+        // 打印 Hash
+        printf("0x%08X | ", s.hash);
+        
+        // 打印 Val
+        printf("%llu\n", s.val);
+    }
+    printf("--- End of Symbol Table Dump ---\n");
 }

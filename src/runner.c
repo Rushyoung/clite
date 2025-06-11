@@ -1,10 +1,9 @@
 #include "runner.h"
 
-#include <stdio.h>
-#include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 
 #include "def.h"
 #include "opcode.h"
@@ -70,7 +69,7 @@ int run(context_t ctx){
                     free(stk);
                     return ax;
                 }
-                printf("return from function, ax = %d\n", ax);
+                printf("return from function, ax = %llu\n", ax);
                 pc = ctx->btcode + *(bp - 1); // 恢复返回地址
                 sp = bp - 3; // 恢复栈指针
                 bp = stk + *(bp - 2); // 恢复基指针
@@ -174,8 +173,7 @@ int run(context_t ctx){
                     free(stk);
                     return -1;
                 }
-                sp--;
-                ax = malloc(sp[0]);
+                ax = malloc(ax);
                 break;
             case OP_FREE:
                 if(*pc != 1){
@@ -183,64 +181,7 @@ int run(context_t ctx){
                     free(stk);
                     return -1;
                 }
-                sp--;
-                free((void*)sp[0]);
-                ax = 0;
-                break;
-            case OP_MEMSET:
-                if(*pc != 3){
-                    fprintf(stderr, "memset() expects 3 arguments, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-                sp -= 2; // pop address and value
-                ax = memset((void*)sp[0], sp[1], sp[2]);
-                break;
-            case OP_MEMCMP:
-                if(*pc != 3){
-                    fprintf(stderr, "memcmp() expects 3 arguments, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-                sp -= 2; // pop two addresses
-                ax = memcmp((void*)sp[0], (void*)sp[1], sp[2]);
-                break;
-            case OP_READ:
-                if(*pc != 3){
-                    fprintf(stderr, "read() expects 3 arguments, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-                sp -= 3;
-                ax = read(sp[0], (void*)sp[1], sp[2]);
-                break;
-            case OP_OPEN:
-                if(*pc != 2){
-                    fprintf(stderr, "open() expects 2 arguments, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-                sp -= 2; // pop filename and flags
-                ax = open((const char*)sp[0], sp[1]);
-                break;
-            case OP_CLOSE:
-                if(*pc != 1){
-                    fprintf(stderr, "close() expects 1 argument, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-                sp--;
-                ax = close(sp[0]);
-                break;
-            case OP_EXIT:
-                if(*pc != 1){
-                    fprintf(stderr, "exit() expects 1 argument, got %llu\n", *pc);
-                    free(stk);
-                    return -1;
-                }
-                sp--;
-                free(stk);
-                exit(sp[0]); // exit the program
+
             default:
                 fprintf(stderr, "Unknown opcode: %llu\n", ip);
                 free(stk);
