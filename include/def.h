@@ -32,4 +32,14 @@ token_t*  SymAdd(context_t ctx, token_t tk);
 void      SymSetloc(context_t ctx);
 void      SymEndloc(context_t ctx);
 
+struct _args_t{
+    int debug;
+    int bytecode;
+    char* inputs;
+};
+
+extern struct _args_t __args__;
+
+void InitArgs(int argc, char** argv);
+
 #endif//__DEF_H__

@@ -143,3 +143,25 @@ void SymEndloc(context_t ctx){
     ctx->sym_idx = ctx->sym_loc - ctx->sym;
     ctx->sym_loc = NULL; // reset local symbol table pointer
 }
+
+
+struct _args_t __args__;
+
+void InitArgs(int argc, char* argv[]){
+    __args__.debug = 0;
+    __args__.bytecode = 0;
+    __args__.inputs = NULL;
+
+    for(int i = 1; i < argc; i++){
+        if(strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0){
+            __args__.debug = 1;
+        } else if(strcmp(argv[i], "--bytecode") == 0 || strcmp(argv[i], "-b") == 0){
+            __args__.bytecode = 1;
+        } else if(__args__.inputs == NULL){
+            __args__.inputs = argv[i];
+        } else {
+            fprintf(stderr, "Unknown argument: %s\n", argv[i]);
+            exit(EXIT_FAILURE);
+        }
+    }
+}

@@ -24,7 +24,9 @@ int run(context_t ctx){
     }
     for(ip = *pc; ip != 0; ip = *pc){
         pc++;
-        printf("%2llu OP=%2llu, sp = %2d, ax = %d\n", pc - ctx->btcode - 1, ip, sp - stk, ax);
+        if(__args__.debug){
+            printf("%2llu OP=%2llu, sp = %2d, ax = %d\n", pc - ctx->btcode - 1, ip, sp - stk, ax);
+        }
         switch(ip){
             case OP_G_GLO:
                 ax = ctx->sym[*pc].val; // get global variable value
@@ -72,7 +74,6 @@ int run(context_t ctx){
                 }
             case OP_RET:
                 if(bp == stk){
-                    fprintf(stderr, "Return from main function\n");
                     free(stk);
                     return ax;
                 }

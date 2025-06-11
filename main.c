@@ -18,7 +18,7 @@ char* load(const char* file_name, size_t* file_size){
     FILE* file = fopen(file_name, "rb");
     if(!file){
         perror("Failed to open file");
-        return NULL;
+        exit(EXIT_FAILURE);
     }
 
     fseek(file, 0, SEEK_END);
@@ -29,7 +29,7 @@ char* load(const char* file_name, size_t* file_size){
     if(!buffer){
         perror("Failed to allocate memory for file");
         fclose(file);
-        return NULL;
+        exit(EXIT_FAILURE);
     }
 
     fread(buffer, 1, *file_size, file);
@@ -40,23 +40,24 @@ char* load(const char* file_name, size_t* file_size){
 }
 
 
-int main(int argc, char **argv){
-    context_t ctx = InitContext();
-	char* file_name;
-    size_t file_size = 0;
-    if(argc < 2){
-        fprintf(stderr, "Usage: %s <source_file>\n", argv[0]);
+int main(int argc, char *argv[]){
+    if(argc == 1){
+        fprintf(stderr, "Usage: clite <source_file>\n");
         return 1;
     }
-    else{
-        file_name = argv[1];
-    }
+    InitArgs(argc, argv);
 
-    char*  file_code = load(file_name, &file_size);
+    size_t file_size = 0;
+    char*  file_code = load(__args__.inputs, &file_size);
 
+    context_t ctx = InitContext();
     scanner sc = InitScanner(file_size, file_code);
     compile(ctx, sc);
-    DumpBtcode(ctx);
+
+    if(__args__.bytecode){
+        DumpBtcode(ctx);
+    }
+
     run(ctx);
     return 0;
 }
