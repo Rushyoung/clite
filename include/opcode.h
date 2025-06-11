@@ -31,16 +31,6 @@ typedef enum {
     OP_NOT,     // 逻辑非
     OP_NEGATE,  // 逻辑负
     OP_STR,     // 转为字符串
-    OP_OPEN,    // 打开文件 build-in = 30
-    OP_READ,    // 读取文件 build-in
-    OP_CLOSE,   // 关闭文件 build-in
-    OP_PRINTF,  // 打印输出 build-in
-    OP_INPUT,   // 输入 build-in，need free memory
-    OP_MALLOC,  // 动态内存分配 build-in
-    OP_FREE,    // 释放内存 build-in
-    OP_MEMSET,  // 内存设置 build-in
-    OP_MEMCMP,  // 内存比较 build-in
-    OP_EXIT,    // 退出程序 build-in
 } OpCode;
 
 enum {

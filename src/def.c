@@ -25,7 +25,8 @@ context_t InitContext(){
 
     char* builtin = 
     "char else enum for if int return sizeof while void main "
-    "open read close printf input malloc free memset memcmp exit";
+    "open read close printf input malloc free "
+    "memset memcmp exit time sleep random";
     scanner keyword = InitScanner(106, builtin);
 
     for(int ids = TK_CHAR; ids <= TK_VOID; ids++){
@@ -42,11 +43,11 @@ context_t InitContext(){
         lite_open, lite_read, lite_close, lite_printf, lite_input,
         lite_malloc, lite_free, lite_memset, lite_memcmp, lite_exit
     };
-    for(int ids = OP_OPEN; ids <= OP_EXIT; ids++){
+    for(int ids = 0; ids < sizeof(native_functions); ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system calls
         ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all system calls return int
-        ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids - OP_OPEN];
+        ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids];
     }
 
     free(keyword);

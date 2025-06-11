@@ -4,6 +4,8 @@
 
 int main(){
     int fd = open("./example/file.c", 0);
+    if (fd < 0) 
+        fd = open("./file.c", 0);
     if (fd < 0) {
         printf("Error opening file");
         return 1;

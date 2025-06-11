@@ -86,17 +86,7 @@ char* op_name[64] = {
     [OP_MOD] = "OP_MOD",
     [OP_NOT] = "OP_NOT",
     [OP_NEGATE] = "OP_NEGATE",
-    [OP_STR] = "OP_STR",
-    [OP_OPEN] = "OPEN_FILE", 
-    [OP_READ] = "READ_FILE", 
-    [OP_CLOSE] = "CLOSE_FILE", 
-    [OP_PRINTF] = "PRINTF", 
-    [OP_INPUT] = "INPUT",
-    [OP_MALLOC] = "MALLOC", 
-    [OP_FREE] = "FREE", 
-    [OP_MEMSET] = "MEMSET", 
-    [OP_MEMCMP] = "MEMCMP", 
-    [OP_EXIT] = "EXIT"
+    [OP_STR] = "OP_STR"
 };
 
 
@@ -156,8 +146,7 @@ void DumpBtcode(context_t ctx){
         }
         if (op == OP_JMP || op == OP_JZ) {
             printf("Jump to: %lld\n", *cur++);
-        } else if((OP_G_GLO <= op && op <= OP_CALL) || // 1-8 are variable operations
-                  (OP_OPEN <= op && op <= OP_EXIT)) { // 24-32 are system calls
+        } else if(OP_G_GLO <= op && op <= OP_CALL){ // 1-8 are variable operations
             printf("value: %lld\n", *cur++);
         } else {
             printf("\n");
