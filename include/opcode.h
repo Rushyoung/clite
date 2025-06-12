@@ -14,7 +14,8 @@ typedef enum {
     OP_FUNC,    // 放在函数片段开头，仅代表这个地址是函数入口，无实际操作
     OP_SAD,     // 保存地址，将当前栈地址保存到栈顶
     OP_PUSH,    // 压栈 = 12
-    OP_OFFSET,  // 下标偏移量
+    OP_G_OFF,   // 下标偏移量读
+    OP_S_OFF,   // 下标偏移量写
     OP_OR,      // 按位或
     OP_XOR,     // 按位异或
     OP_AND,     // 按位与

@@ -97,7 +97,7 @@ void run(context_t ctx){
                 *sp = ax;
                 sp++;
                 break;
-            case OP_OFFSET:{
+            case OP_G_OFF:{
                 uint64_t offset = ax;
                 sp--;
                 void *addr = (void*)(*sp);
@@ -106,6 +106,18 @@ void run(context_t ctx){
                     ax = (uint64_t)chr;
                 } else {
                     ax = *(uint64_t*)(addr + offset * sizeof(uint64_t));
+                }
+                break;
+            }
+            case OP_S_OFF:{
+                sp--;
+                uint64_t offset = *sp;
+                sp--;
+                void *addr = (void*)(*sp);
+                if(ctx->heap <= addr && addr < ctx->heap + ctx->heap_cur){
+                    *(char*)(addr + offset) = (char)ax;
+                } else {
+                    *(uint64_t*)(addr + offset * sizeof(uint64_t)) = ax;
                 }
                 break;
             }

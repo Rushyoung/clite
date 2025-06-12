@@ -377,7 +377,13 @@ static void expr_offset(ParseFunctionArgs) {
     if(!match(ctx, sc, TK_RI_BRCKT)) {
         raise(sc->line, "Expected ']' after array offset");
     }
-    emit(ctx, OP_OFFSET); // 生成数组偏移指令
+    if(can_assign && match(ctx, sc, TK_ASSIGN)) {
+        emit(ctx, OP_PUSH);
+        parse_expr(ctx, sc, PREC_ASSIGNMENT);
+        emit(ctx, OP_S_OFF); // 设置数组偏移
+    } else {
+        emit(ctx, OP_G_OFF); // 获取数组偏移
+    }
 }
 
 static void expr_ternary(ParseFunctionArgs) {
