@@ -23,7 +23,6 @@ typedef enum{
 } PrecLv;
 
 #define ParseFunctionArgs context_t ctx, scanner sc, int can_assign
-#define PassFunctionArgs ctx, sc, can_assign
 
 typedef void (*ParseFn)(ParseFunctionArgs);
 typedef struct{
