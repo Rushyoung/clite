@@ -24,7 +24,7 @@ typedef enum {
     OP_GRT,     // 大于
     OP_SHL,     // 左移
     OP_SHR,     // 右移
-    OP_ADD,     // 加法 = 22
+    OP_ADD,     // 加法 = 23
     OP_SUB,     // 减法
     OP_MUL,     // 乘法
     OP_DIV,     // 除法
