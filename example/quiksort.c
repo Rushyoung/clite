@@ -40,13 +40,13 @@ int main() {
     
 
     for (i = 0; i < n; i++) {
-        printf("%d ", arr[i] = rand() % 100);
+        printf("%2d ", arr[i] = rand() % 100);
     }
     printf("\n");
     quickSort(arr, 0, n - 1);
     
     for (i = 0; i < n; i++) {
-        printf("%d ", arr[i]);
+        printf("%2d ", arr[i]);
     }
     
     return 0;

@@ -607,8 +607,37 @@ void parse_stmt(context_t ctx, scanner sc) {
     }
 }
 
+void parse_enum(context_t ctx, scanner sc){
+    expect(ctx, sc, TK_LE_BRACE, "Expected '{' after 'enum' declaration");
+    int enum_value = 0;
+    while(!match(ctx, sc, TK_RI_BRACE)){
+        expect(ctx, sc, TK_ID, "Expected identifier in enum declaration");
+        token_t* id = SymFind(ctx, prev(sc));
+        if(id->class != 0) {
+            raise(sc->line, "Enum member '%.*s' already defined", id->len, id->name);
+        }
+        id->class = TK_SYS;
+        id->type = TP_INT;
+        if(match(ctx, sc, TK_ASSIGN)) {
+            expect(ctx, sc, TK_NUM, "Expected number after '=' in enum declaration");
+            enum_value = prev(sc).val;
+        }
+        id->val = enum_value;
+        enum_value++;
+        if(!match(ctx, sc, TK_COMMA)) { // 如果不是逗号分隔, 必然是最后一个枚举成员
+            expect(ctx, sc, TK_RI_BRACE, "Expected ',' or '}' in enum declaration");
+            break;
+        }
+    }
+    expect(ctx, sc, TK_SEMICOLON, "Expected ';' after enum declaration");
+}
+
 // 解析全局声明 (变量或函数)
 void parse_global(context_t ctx, scanner sc) {
+    if(match(ctx, sc, TK_ENUM)) {
+        parse_enum(ctx, sc); // 解析枚举声明
+        return;
+    }
     int base_type = TP_INT; // 基本类型，默认为整型
     int real_type = TP_INT; // 实际类型，默认为整型
     real_type = base_type = __ctype(ctx, sc); // 解析类型声明
