@@ -34,6 +34,7 @@ static void expr_call(ParseFunctionArgs);
 static void expr_offset(ParseFunctionArgs);
 static void expr_list(ParseFunctionArgs);
 static void expr_assign(ParseFunctionArgs);
+static void expr_ternary(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
@@ -61,7 +62,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_WHILE]     = {NULL,            NULL,           PREC_NONE },
     [TK_VOID]      = {NULL,            NULL,           PREC_NONE },
     [TK_ASSIGN]    = {NULL,            expr_assign,    PREC_ASSIGNMENT },
-    [TK_COND]      = {NULL,            NULL,           PREC_NONE },
+    [TK_COND]      = {NULL,            expr_ternary,   PREC_TERNARY },
     [TK_LOR]       = {NULL,            expr_or,        PREC_OR },
     [TK_LAN]       = {NULL,            expr_and,       PREC_AND },
     [TK_NOT]       = {expr_unary,      NULL,           PREC_NONE },
@@ -369,6 +370,18 @@ static void expr_offset(ParseFunctionArgs) {
         raise(sc->line, "Expected ']' after array offset");
     }
     emit(ctx, OP_OFFSET); // 生成数组偏移指令
+}
+
+static void expr_ternary(ParseFunctionArgs) {
+    emit(ctx, OP_JZ);
+    uint64_t* addr_else = blank(ctx);
+    parse_expr(ctx, sc, PREC_TERNARY);
+    expect(ctx, sc, TK_COLON, "Expected ':' after '?' in ternary expression");
+    emit(ctx, OP_JMP);
+    uint64_t* addr_end = blank(ctx);
+    patch(ctx, addr_else, ctx->btcode_cur - ctx->btcode);
+    parse_expr(ctx, sc, PREC_TERNARY);
+    patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
 }
 
 static void expr_list(ParseFunctionArgs) {
