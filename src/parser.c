@@ -25,6 +25,7 @@
 static void expr_number(ParseFunctionArgs);
 static void expr_unary(ParseFunctionArgs);
 static void expr_binary(ParseFunctionArgs);
+static void expr_group(ParseFunctionArgs);
 static void expr_variable(ParseFunctionArgs);
 static void expr_string(ParseFunctionArgs);
 static void expr_and(ParseFunctionArgs);
@@ -84,7 +85,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_MOD]       = {NULL,            expr_binary,    PREC_FACTOR },
     [TK_INC]       = {expr_preinc,     NULL,           PREC_NONE },
     [TK_DEC]       = {expr_preinc,     NULL,           PREC_NONE },
-    [TK_LE_PAREN]  = {NULL,            expr_call,      PREC_CALL },
+    [TK_LE_PAREN]  = {expr_group,      expr_call,      PREC_CALL },
     [TK_RI_PAREN]  = {NULL,            NULL,           PREC_NONE },
     [TK_LE_BRACE]  = {expr_list,       NULL,           PREC_NONE },
     [TK_RI_BRACE]  = {NULL,            NULL,           PREC_NONE },
@@ -146,6 +147,13 @@ static void expr_number(ParseFunctionArgs) {
     token_t current = prev(sc);
     emit(ctx, OP_IMM);
     emit(ctx, current.val);
+}
+
+static void expr_group(ParseFunctionArgs) {
+    parse_expr(ctx, sc, PREC_ASSIGNMENT);
+    if(!match(ctx, sc, TK_RI_PAREN)) {
+        raise(sc->line, "Expected ')' after expression");
+    }
 }
 
 static void expr_string(ParseFunctionArgs) {
