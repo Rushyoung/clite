@@ -461,12 +461,12 @@ static void stmt_decl(ParseFunctionArgs) {
     do{
         token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
         if(id->class == TK_LOC) {
-            raise(sc->line, "Variable '%.*s' already defined", id->name, id->len);
+            raise(sc->line, "Variable '%.*s' already defined", id->len, id->name);
         } else if(id->class == TK_GLO || id->class == TK_FUN) {
             id = SymAdd(ctx, *id); // 如果是全局变量或函数，则添加到符号表
         }
         if(real_type == TP_VOID) {
-            raise(sc->line, "Variable '%.*s' cannot be of type void", id->name, id->len);
+            raise(sc->line, "Variable '%.*s' cannot be of type void", id->len, id->name);
         }
         id->type = real_type;
         id->class = TK_LOC;
@@ -574,7 +574,7 @@ void parse_global(context_t ctx, scanner sc) {
     real_type = base_type = __ctype(ctx, sc); // 解析类型声明
     token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
     if(id->class == TK_GLO || id->class == TK_FUN) {
-        raise(sc->line, "Global variable '%.*s' already defined", id->name, id->len);
+        raise(sc->line, "Global variable '%.*s' already defined", id->len, id->name);
     }
     id->type = real_type; // 设置变量类型
     if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
@@ -592,7 +592,7 @@ void parse_global(context_t ctx, scanner sc) {
             int arg_type = __ctype(ctx, sc); // 解析参数类型
             token_t* arg_id = __identifier(ctx, sc, &arg_type); // 解析参数标识符
             if(arg_id->class == TK_LOC) {
-                raise(sc->line, "Function argument '%.*s' already defined in this scope", arg_id->name, arg_id->len);
+                raise(sc->line, "Function argument '%.*s' already defined in this scope", arg_id->len, arg_id->name);
             } else if(arg_id->class == TK_GLO || arg_id->class == TK_FUN) {
                 arg_id = SymAdd(ctx, *arg_id); // 如果是全局变量或函数，则添加到符号表
             }
@@ -627,7 +627,7 @@ void parse_global(context_t ctx, scanner sc) {
         }
         id = __identifier(ctx, sc, &real_type); // 继续解析下一个标识符
         if(id->class == TK_GLO || id->class == TK_FUN) {
-            raise(sc->line, "Global variable '%.*s' already defined", id->name, id->len);
+            raise(sc->line, "Global variable '%.*s' already defined", id->len, id->name);
         }
         id->type = real_type; // 设置变量类型
         goto define_loop;
