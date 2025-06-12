@@ -419,20 +419,20 @@ void parse_expr(context_t ctx, scanner sc, PrecLv level) {
         raise(sc->line, "Expected expression, but something else found");
     }
     int can_assign = level <= PREC_ASSIGNMENT; // 是否允许赋值
-    prefixFn(PassFunctionArgs);
+    prefixFn(ctx, sc, can_assign);
     while(level <= Rules[prst(sc).tk].prec) {
         next(sc, ctx);
         ParseFn infixFn = Rules[prev(sc).tk].infix;
         if(infixFn == NULL) {
             return;
         }
-        infixFn(PassFunctionArgs);
+        infixFn(ctx, sc, can_assign);
     }
 }
 
 
 static void stmt_expr(ParseFunctionArgs) {
-    parse_expr(PassFunctionArgs); // 解析表达式
+    parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析表达式
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after expression statement"); // 确保以分号结尾
 }
 
