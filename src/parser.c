@@ -373,7 +373,7 @@ static void expr_call(ParseFunctionArgs) {
 
 static void expr_offset(ParseFunctionArgs) {
     emit(ctx, OP_PUSH);
-    parse_expr(ctx, sc, PREC_OFFSET); // 解析偏移表达式
+    parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析偏移表达式
     if(!match(ctx, sc, TK_RI_BRCKT)) {
         raise(sc->line, "Expected ']' after array offset");
     }
