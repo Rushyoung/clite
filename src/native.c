@@ -146,7 +146,7 @@ uint64_t lite_exit(NativeFunctionArgs) {
 
 uint64_t lite_time(NativeFunctionArgs) {
     if (arity != 1) {
-        fprintf(stderr, "lite_time requires no arguments\n");
+        fprintf(stderr, "lite_time requires 1 arguments\n");
         exit(EXIT_FAILURE);
     }
     if(bp[0] != 0) {
