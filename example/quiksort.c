@@ -35,12 +35,12 @@ void quickSort(int* arr, int low, int high) {
 
 // 测试代码
 int main() {
-    int* arr = {10, 7, 8, 9, 1, 5};
-    int n = 6, i;
+    int* arr = malloc(12 * 8);
+    int n = 12, i;
     
 
     for (i = 0; i < n; i++) {
-        printf("%d ", arr[i]);
+        printf("%d ", arr[i] = rand() % 100);
     }
     printf("\n");
     quickSort(arr, 0, n - 1);

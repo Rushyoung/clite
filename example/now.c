@@ -11,14 +11,10 @@ int main(){
     int now = time(NULL);
 
     for(year = 1970; now >= 365 * 24 * 3600; year++){
-        if(is_leap_year(year)){
-            now = now - (366 * 24 * 3600);
-        } else {
-            now = now - (365 * 24 * 3600);
-        }
+        now = now - ((365 + is_leap_year(year)) * 24 * 3600);
     }
 
-    int *month_days = {31, 28+ is_leap_year(year), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int *month_days = {31, 28+is_leap_year(year), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     for(month = 0; now >= month_days[month] * 24 * 3600; month++){
         now = now - month_days[month] * 24 * 3600;
     }
