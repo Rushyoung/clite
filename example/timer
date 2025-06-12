@@ -1,0 +1,13 @@
+int main(){
+    int time = 59;
+    while(1){
+        if(time == 0){
+            time = 59;
+        }
+        else{
+            time--;
+        }
+        printf("%d\n", time);
+        sleep(1);
+    }
+}
