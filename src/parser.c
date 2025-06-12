@@ -96,6 +96,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_COLON]     = {NULL,            NULL,           PREC_NONE },
 };
 
+// 检查当前 token 是否匹配指定类型，如果匹配则前进到下一个 token
 static int match(context_t ctx, scanner sc, TkType tk) {
     token_t current = prst(sc);
     if(current.tk == tk) {
@@ -105,6 +106,7 @@ static int match(context_t ctx, scanner sc, TkType tk) {
     return 0; // 匹配失败
 }
 
+// 期望当前 token 为指定类型，否则报错并退出
 static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
     token_t current = prst(sc);
     if(current.tk != tk) {
@@ -113,7 +115,7 @@ static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
     next(sc, ctx); // 跳过匹配的 token
 }
 
-
+// 解析类型声明 (int, char, void)
 static int __ctype(context_t ctx, scanner sc) {
     token_t tk = prst(sc);
     int type = TP_INT; // 默认类型为整型
@@ -135,6 +137,7 @@ static int __ctype(context_t ctx, scanner sc) {
     return type; // 返回解析的类型
 }
 
+// 解析标识符，并处理指针类型
 static token_t* __identifier(context_t ctx, scanner sc, int* type) {
     while(match(ctx, sc, TK_MUL)) {
         *type += TP_PTR; // 处理指针类型
@@ -143,12 +146,14 @@ static token_t* __identifier(context_t ctx, scanner sc, int* type) {
     return SymFind(ctx, prev(sc));
 }
 
+// 解析数字常量表达式
 static void expr_number(ParseFunctionArgs) {
     token_t current = prev(sc);
     emit(ctx, OP_IMM);
     emit(ctx, current.val);
 }
 
+// 解析括号表达式
 static void expr_group(ParseFunctionArgs) {
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     if(!match(ctx, sc, TK_RI_PAREN)) {
@@ -156,6 +161,7 @@ static void expr_group(ParseFunctionArgs) {
     }
 }
 
+// 解析字符串字面量表达式
 static void expr_string(ParseFunctionArgs) {
     emit(ctx, OP_IMM);
     emit(ctx, ctx->heap_cur);
@@ -185,10 +191,12 @@ static void expr_string(ParseFunctionArgs) {
     ctx->heap_cur++;
 }
 
+// 解析赋值表达式 (目前实现为报错)
 static void expr_assign(ParseFunctionArgs) {
     raise(sc->line, "The left side must be a variable");
 }
 
+// 解析一元表达式
 static void expr_unary(ParseFunctionArgs) {
     token_t current = prev(sc);
     parse_expr(ctx, sc, PREC_UNARY); // 解析表达式
@@ -207,6 +215,7 @@ static void expr_unary(ParseFunctionArgs) {
     }
 }
 
+// 解析前置自增/自减表达式
 static void expr_preinc(ParseFunctionArgs) {
     token_t current = prev(sc);
     expect(ctx, sc, TK_ID, "Expected identifier after increment/decrement operator");
@@ -236,6 +245,7 @@ static void expr_preinc(ParseFunctionArgs) {
     emit(ctx, id->val);
 }
 
+// 解析二元表达式
 static void expr_binary(ParseFunctionArgs) {
     emit(ctx, OP_PUSH);
     token_t current = prev(sc);
@@ -296,6 +306,7 @@ static void expr_binary(ParseFunctionArgs) {
     }
 }
 
+// 解析逻辑与 (&&) 表达式
 static void expr_and(ParseFunctionArgs) {
     emit(ctx, OP_JZ);
     uint64_t* addr = blank(ctx); // 留白，跳转地址
@@ -303,6 +314,7 @@ static void expr_and(ParseFunctionArgs) {
     patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充跳转地址
 }
 
+// 解析逻辑或 (||) 表达式
 static void expr_or(ParseFunctionArgs) {
     emit(ctx, OP_JZ);
     uint64_t* addr_else = blank(ctx); // 留白，跳转到 else 分支
@@ -313,6 +325,7 @@ static void expr_or(ParseFunctionArgs) {
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode); // 填充结束跳转地址
 }
 
+// 解析变量表达式，处理变量读取、赋值和后置自增/自减
 static void expr_variable(ParseFunctionArgs) {
     token_t tk = prev(sc);     // 获取当前标识符
     token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
@@ -356,6 +369,7 @@ static void expr_variable(ParseFunctionArgs) {
     emit(ctx, id->val);
 }
 
+// 解析函数调用表达式
 static void expr_call(ParseFunctionArgs) {
     emit(ctx, OP_SAD);
     int arg_count = 0;  // 函数参数计数
@@ -371,6 +385,7 @@ static void expr_call(ParseFunctionArgs) {
     emit(ctx, arg_count);   // 使用参数计数
 }
 
+// 解析数组下标/偏移量表达式
 static void expr_offset(ParseFunctionArgs) {
     emit(ctx, OP_PUSH);
     parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析偏移表达式
@@ -386,6 +401,7 @@ static void expr_offset(ParseFunctionArgs) {
     }
 }
 
+// 解析三元条件表达式 (?:)
 static void expr_ternary(ParseFunctionArgs) {
     emit(ctx, OP_JZ);
     uint64_t* addr_else = blank(ctx);
@@ -398,6 +414,7 @@ static void expr_ternary(ParseFunctionArgs) {
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
 }
 
+// 解析列表初始化表达式 (e.g., {1, 2, 3})
 static void expr_list(ParseFunctionArgs) {
     if(match(ctx, sc, TK_RI_BRACE)) {
         emit(ctx, OP_IMM);
@@ -418,6 +435,7 @@ static void expr_list(ParseFunctionArgs) {
     emit(ctx, member_count); // 使用成员计数
 }
 
+// 根据优先级解析表达式
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx);
     ParseFn prefixFn = Rules[prev(sc).tk].prefix; 
@@ -436,18 +454,20 @@ void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     }
 }
 
-
+// 解析表达式语句
 static void stmt_expr(ParseFunctionArgs) {
     parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析表达式
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after expression statement"); // 确保以分号结尾
 }
 
+// 解析代码块语句 ({ ... })
 static void stmt_block(ParseFunctionArgs) {
     while(!match(ctx, sc, TK_RI_BRACE)) { // 解析代码块中的语句
         parse_stmt(ctx, sc);
     }
 }
 
+// 解析 return 语句
 static void stmt_return(ParseFunctionArgs) {
     if(match(ctx, sc, TK_SEMICOLON)) {
         emit(ctx, OP_IMM);
@@ -459,6 +479,7 @@ static void stmt_return(ParseFunctionArgs) {
     emit(ctx, OP_RET);
 }
 
+// 解析变量声明语句
 static void stmt_decl(ParseFunctionArgs) {
     int base_type = 0;
     token_t type = prev(sc); // 获取当前类型声明
@@ -497,6 +518,7 @@ static void stmt_decl(ParseFunctionArgs) {
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after variable declaration"); // 确保以分号结尾
 }
 
+// 解析 while 循环语句
 static void stmt_while(ParseFunctionArgs) {
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
     uint64_t* addr_start = ctx->btcode_cur;
@@ -510,6 +532,7 @@ static void stmt_while(ParseFunctionArgs) {
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
 }
 
+// 解析 for 循环语句
 static void stmt_for(ParseFunctionArgs) {
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'for'");
     if(match(ctx, sc, TK_SEMICOLON)) {
@@ -545,6 +568,7 @@ static void stmt_for(ParseFunctionArgs) {
     }
 }
 
+// 解析 if 语句
 static void stmt_if(ParseFunctionArgs){
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'if'");
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
@@ -564,6 +588,7 @@ static void stmt_if(ParseFunctionArgs){
     }
 }
 
+// 解析单个语句
 void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         stmt_if(ctx, sc, 1); // 解析 if 语句
@@ -582,6 +607,7 @@ void parse_stmt(context_t ctx, scanner sc) {
     }
 }
 
+// 解析全局声明 (变量或函数)
 void parse_global(context_t ctx, scanner sc) {
     int base_type = TP_INT; // 基本类型，默认为整型
     int real_type = TP_INT; // 实际类型，默认为整型
@@ -648,7 +674,7 @@ void parse_global(context_t ctx, scanner sc) {
     }
 }
 
-
+// 编译源代码，生成字节码
 void compile(context_t ctx, scanner sc) {
     next(sc, ctx); // 开始解析，扫描第一个token
     while(!match(ctx, sc, 0)) {
