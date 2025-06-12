@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include "opcode.h"
 
@@ -143,6 +144,43 @@ uint64_t lite_exit(NativeFunctionArgs) {
 }
 
 
+uint64_t lite_time(NativeFunctionArgs) {
+    if (arity != 1) {
+        fprintf(stderr, "lite_time requires no arguments\n");
+        exit(EXIT_FAILURE);
+    }
+    if(bp[0] != 0) {
+        fprintf(stderr, "lite_time donot support non-zero argument\n");
+        exit(EXIT_FAILURE);
+    }
+    return (uint64_t)time(NULL); // return current time in seconds
+}
+
+
+uint64_t lite_sleep(NativeFunctionArgs) {
+    if (arity != 1) {
+        fprintf(stderr, "lite_sleep requires 1 argument\n");
+        exit(EXIT_FAILURE);
+    }
+    int seconds = (int)(bp[0]);
+    if (seconds < 0) {
+        fprintf(stderr, "lite_sleep requires non-negative argument\n");
+        exit(EXIT_FAILURE);
+    }
+    sleep(seconds);
+    return 0;
+}
+
+
+uint64_t lite_rand(NativeFunctionArgs) {
+    if (arity != 0) {
+        fprintf(stderr, "lite_rand requires no arguments\n");
+        exit(EXIT_FAILURE);
+    }
+    return (uint64_t)(rand());
+}
+
+
 uint64_t buildin_list(NativeFunctionArgs) {
     uint64_t *list = malloc(arity * sizeof(uint64_t));
     if (!list) {
@@ -167,5 +205,8 @@ int is_native(uint64_t func) {
            func == lite_free ||
            func == lite_memset ||
            func == lite_memcmp ||
+           func == lite_time ||
+           func == lite_sleep ||
+           func == lite_rand ||
            func == lite_exit;
 }

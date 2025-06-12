@@ -11,6 +11,8 @@
 #include "scanner.h"
 #include "token.h"
 
+#include "debug.h"
+
 #define raise(l, ...) ({ \
     printf("line: %lld\n", (l)); \
     printf("    : "); \
@@ -31,6 +33,7 @@ static void expr_preinc(ParseFunctionArgs);
 static void expr_call(ParseFunctionArgs);
 static void expr_offset(ParseFunctionArgs);
 static void expr_list(ParseFunctionArgs);
+static void expr_assign(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
@@ -57,7 +60,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_SIZEOF]    = {NULL,            NULL,           PREC_NONE },
     [TK_WHILE]     = {NULL,            NULL,           PREC_NONE },
     [TK_VOID]      = {NULL,            NULL,           PREC_NONE },
-    [TK_ASSIGN]    = {NULL,            NULL,           PREC_NONE },
+    [TK_ASSIGN]    = {NULL,            expr_assign,    PREC_ASSIGNMENT },
     [TK_COND]      = {NULL,            NULL,           PREC_NONE },
     [TK_LOR]       = {NULL,            expr_or,        PREC_OR },
     [TK_LAN]       = {NULL,            expr_and,       PREC_AND },
@@ -123,6 +126,7 @@ static int __ctype(context_t ctx, scanner sc) {
             type = TP_VOID;
             break;
         default:
+            DumpToken(ctx, tk);
             raise(sc->line, "Expected type declaration (int, char, void)");
     }
     next(sc, ctx); // 跳过类型声明
@@ -170,6 +174,10 @@ static void expr_string(ParseFunctionArgs) {
     }while(match(ctx, sc, TK_STR));
     ctx->heap[ctx->heap_cur] = '\0';
     ctx->heap_cur++;
+}
+
+static void expr_assign(ParseFunctionArgs) {
+    raise(sc->line, "The left side must be a variable");
 }
 
 static void expr_unary(ParseFunctionArgs) {

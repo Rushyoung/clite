@@ -19,6 +19,9 @@ uint64_t lite_free(NativeFunctionArgs);
 uint64_t lite_memset(NativeFunctionArgs);
 uint64_t lite_memcmp(NativeFunctionArgs);
 uint64_t lite_exit(NativeFunctionArgs);
+uint64_t lite_time(NativeFunctionArgs);
+uint64_t lite_sleep(NativeFunctionArgs);
+uint64_t lite_rand(NativeFunctionArgs);
 
 uint64_t buildin_list(NativeFunctionArgs);  // just use in bytecode
 

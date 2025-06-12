@@ -11,7 +11,7 @@ int main(){
         return 1;
     }
     char *buffer = malloc(1024);
-    if(!buffer) {
+    if(buffer == NULL) {
         printf("Memory allocation failed");
         close(fd);
         return 1;

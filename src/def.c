@@ -24,10 +24,11 @@ context_t InitContext(){
     ctx->btcode_cur = ctx->btcode;
 
     char* builtin = 
-    "char else enum for if int return sizeof while void main "
-    "open read close printf input malloc free "
-    "memset memcmp exit time sleep random";
-    scanner keyword = InitScanner(106, builtin);
+    "char else enum for if int return sizeof while void "
+    "main open read close printf input malloc "
+    "free memset memcmp exit time sleep rand "
+    "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX";
+    scanner keyword = InitScanner(175, builtin);
 
     for(int ids = TK_CHAR; ids <= TK_VOID; ids++){
         next(keyword, ctx);
@@ -41,13 +42,24 @@ context_t InitContext(){
 
     NativeFn native_functions[] = {
         lite_open, lite_read, lite_close, lite_printf, lite_input,
-        lite_malloc, lite_free, lite_memset, lite_memcmp, lite_exit
+        lite_malloc, lite_free, lite_memset, lite_memcmp, lite_exit,
+        lite_time, lite_sleep, lite_rand
     };
-    for(int ids = 0; ids < sizeof(native_functions); ids++){
+    for(int ids = 0; ids < 13; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system calls
         ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all system calls return int
         ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids];
+    }
+    
+    uint64_t constants[] = {
+        EXIT_SUCCESS, EXIT_FAILURE, NULL, EOF, RAND_MAX
+    };
+    for(int ids = 0; ids < 5; ids++){
+        next(keyword, ctx);
+        ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system constants
+        ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all constants are int
+        ctx->sym[ctx->sym_idx - 1].val   = constants[ids];
     }
 
     free(keyword);
