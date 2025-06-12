@@ -53,7 +53,9 @@ int main(int argc, char *argv[]){
     context_t ctx = InitContext();
     scanner sc = InitScanner(file_size, file_code);
     compile(ctx, sc);
-
+    if(__args__.symboltable){
+        DumpSymbolTable(ctx);
+    }
     if(__args__.bytecode){
         DumpBtcode(ctx);
     }

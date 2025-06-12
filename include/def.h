@@ -35,6 +35,7 @@ void      SymEndloc(context_t ctx);
 struct _args_t{
     int debug;
     int bytecode;
+    int symboltable;
     char* inputs;
 };
 
