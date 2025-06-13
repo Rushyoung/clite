@@ -59,7 +59,8 @@ void run(context_t ctx){
                 *sp = ax;
                 sp++;
                 break;
-            case OP_FUNC:// 函数入口标记，什么都不做
+            case OP_LOOP: // 循环结束标记，什么都不做
+            case OP_FUNC: // 函数入口标记，什么都不做
                 break;
             case OP_CALL:
                 bp = sp - *pc;
@@ -95,6 +96,18 @@ void run(context_t ctx){
                     pc = ctx->btcode + *pc;
                 }
                 break;
+            case OP_JEND:{
+                uint64_t flag = *pc;
+                pc++;
+                while(*pc != OP_LOOP){
+                    if(OP_G_GLO <= *pc && *pc <= OP_CALL){
+                        pc++;
+                    }
+                    pc++;
+                }
+                pc -= (2 * flag);
+                break;
+            }
             case OP_PUSH:
                 *sp = ax;
                 sp++;
