@@ -9,6 +9,7 @@ typedef enum {
     OP_IMM,     // 加载立即数，一个操作数
     OP_JMP,     // 无条件跳转，一个操作数是跳转地址
     OP_JZ,      // 如果为零则跳转, 一个操作数是跳转地址
+    OP_JEND,    // 跳转到OP_LOOP处，一个操作数，0代表break，1代表continue
     OP_CALL,    // 调用函数，一个操作数是函数参数个数
     OP_RET,     // 返回函数
     OP_FUNC,    // 放在函数片段开头，仅代表这个地址是函数入口，无实际操作

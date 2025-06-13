@@ -44,6 +44,7 @@ static void stmt_decl(ParseFunctionArgs);
 static void stmt_while(ParseFunctionArgs);
 static void stmt_if(ParseFunctionArgs);
 static void stmt_for(ParseFunctionArgs);
+static void stmt_dowhile(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -532,6 +533,18 @@ static void stmt_while(ParseFunctionArgs) {
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
 }
 
+static void stmt_dowhile(ParseFunctionArgs) {
+    uint64_t* addr_start = ctx->btcode_cur;
+    parse_stmt(ctx, sc);
+    expect(ctx, sc, TK_WHILE, "Expected 'while' after 'do'");
+    expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
+    parse_expr(ctx, sc, PREC_ASSIGNMENT);
+    expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
+    emit(ctx, OP_NOT);
+    emit(ctx, OP_JZ); // 如果条件非假，跳回循环开始
+    emit(ctx, addr_start - ctx->btcode); // 跳转到循环开始
+}
+
 // 解析 for 循环语句
 static void stmt_for(ParseFunctionArgs) {
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'for'");
@@ -576,7 +589,6 @@ static void stmt_if(ParseFunctionArgs){
     emit(ctx, OP_JZ);
     uint64_t* if_end = blank(ctx);
     parse_stmt(ctx, sc);
-    //if end
     if(match(ctx, sc, TK_ELSE)){
         emit(ctx, OP_JMP);
         uint64_t* el_end = blank(ctx);
@@ -602,6 +614,10 @@ void parse_stmt(context_t ctx, scanner sc) {
         stmt_block(ctx, sc, 1);
     } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
         stmt_decl(ctx, sc, 1);
+    } else if(match(ctx, sc, TK_SEMICOLON)) {
+        // 空语句，什么都不做
+    } else if(match(ctx, sc, TK_DO)){
+        stmt_dowhile(ctx, sc, 1);
     } else {
         stmt_expr(ctx, sc, 1); // 解析表达式语句
     }
