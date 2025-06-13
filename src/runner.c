@@ -105,7 +105,10 @@ void run(context_t ctx){
                     }
                     pc++;
                 }
-                pc -= (2 * flag);
+                if(flag){
+                    uint64_t goal = *(pc - 1);
+                    pc = ctx->btcode + goal;
+                }
                 break;
             }
             case OP_PUSH:
@@ -208,7 +211,7 @@ void run(context_t ctx){
                 ax = ctx->heap + ax; // convert to string address
                 break;
             default:
-                fprintf(stderr, "Unknown opcode: %llu\n", ip);
+                fprintf(stderr, "Unknown opcode: %llu in %d\n", ip, (int)(pc - ctx->btcode - 1));
                 free(stk);
                 exit(EXIT_FAILURE);
         }

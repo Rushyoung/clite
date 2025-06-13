@@ -45,6 +45,8 @@ static void stmt_while(ParseFunctionArgs);
 static void stmt_if(ParseFunctionArgs);
 static void stmt_for(ParseFunctionArgs);
 static void stmt_dowhile(ParseFunctionArgs);
+static void stmt_break(ParseFunctionArgs);
+static void stmt_continue(ParseFunctionArgs);
 
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
@@ -480,6 +482,22 @@ static void stmt_return(ParseFunctionArgs) {
     emit(ctx, OP_RET);
 }
 
+static void stmt_break(ParseFunctionArgs) {
+    if(SymLoopDepth(ctx) == 0) {
+        raise(sc->line, "Break statement not inside a loop");
+    }
+    emit(ctx, OP_JEND);
+    emit(ctx, 0);
+}
+
+static void stmt_continue(ParseFunctionArgs) {
+    if(SymLoopDepth(ctx) == 0) {
+        raise(sc->line, "Continue statement not inside a loop");
+    }
+    emit(ctx, OP_JEND);
+    emit(ctx, 1);
+}
+
 // 解析变量声明语句
 static void stmt_decl(ParseFunctionArgs) {
     int base_type = 0;
@@ -527,15 +545,20 @@ static void stmt_while(ParseFunctionArgs) {
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
     emit(ctx, OP_JZ);
     uint64_t* addr_end = blank(ctx);
+    SymStartLoop(ctx);
     parse_stmt(ctx, sc);
+    SymEndLoop(ctx);
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode);
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
+    emit(ctx, OP_LOOP);
 }
 
 static void stmt_dowhile(ParseFunctionArgs) {
     uint64_t* addr_start = ctx->btcode_cur;
+    SymStartLoop(ctx);
     parse_stmt(ctx, sc);
+    SymEndLoop(ctx);
     expect(ctx, sc, TK_WHILE, "Expected 'while' after 'do'");
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
@@ -543,6 +566,7 @@ static void stmt_dowhile(ParseFunctionArgs) {
     emit(ctx, OP_NOT);
     emit(ctx, OP_JZ); // 如果条件非假，跳回循环开始
     emit(ctx, addr_start - ctx->btcode); // 跳转到循环开始
+    emit(ctx, OP_LOOP);
 }
 
 // 解析 for 循环语句
@@ -573,12 +597,15 @@ static void stmt_for(ParseFunctionArgs) {
         addr_start = addr_inc;
         patch(ctx, addr_body, ctx->btcode_cur - ctx->btcode);
     }
+    SymStartLoop(ctx);
     parse_stmt(ctx, sc);
+    SymEndLoop(ctx);
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode); // 跳转到循环开始
     if(addr_end) {
         patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
     }
+    emit(ctx, OP_LOOP);
 }
 
 // 解析 if 语句
@@ -618,6 +645,10 @@ void parse_stmt(context_t ctx, scanner sc) {
         // 空语句，什么都不做
     } else if(match(ctx, sc, TK_DO)){
         stmt_dowhile(ctx, sc, 1);
+    } else if(match(ctx, sc, TK_BREAK)){
+        stmt_break(ctx, sc, 1);
+    } else if(match(ctx, sc, TK_CONTINUE)){
+        stmt_continue(ctx, sc, 1);
     } else {
         stmt_expr(ctx, sc, 1); // 解析表达式语句
     }

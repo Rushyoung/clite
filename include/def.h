@@ -15,6 +15,8 @@ struct _context_t{
 
     uint64_t*   btcode;     // bytecode for the program, not used in this version
     uint64_t*   btcode_cur; // current position in bytecode
+
+    int loop_depth; // current loop depth, used for break/continue statements
 };
 
 typedef struct _context_t* context_t;
@@ -32,6 +34,10 @@ token_t*  SymAdd(context_t ctx, token_t tk);
 void      SymSetloc(context_t ctx);
 void      SymEndloc(context_t ctx);
 
+void      SymStartLoop(context_t ctx);
+void      SymEndLoop(context_t ctx);
+int       SymLoopDepth(context_t ctx);
+
 struct _args_t{
     int debug;
     int bytecode;
@@ -41,6 +47,6 @@ struct _args_t{
 
 extern struct _args_t __args__;
 
-void InitArgs(int argc, char** argv);
+void InitArgs(int argc, char* argv[]);
 
 #endif//__DEF_H__

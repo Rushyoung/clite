@@ -82,3 +82,9 @@ Do not finish this step.
 | memset | 内存设置 | `void *ptr, int value, size_t num` | `void *` (指向设置后的内存) | 将 `num` 字节的内存设置为 `value` |
 | memcpy | 内存拷贝 | `void *dest, const void *src, size_t num` | `void *` (指向目标内存) | 将 `src` 的 `num` 字节拷贝到 `dest` |
 | input | 获取用户输入 | `char *buffer` | `int` (实际读取的字符数) | 从标准输入读取一行字符串，最多读取 `size - 1` 个字符，最后添加 `\0` |
+
+
+## 已知bug
+1. continue在do-while循环中，会导致死循环
+2. 在函数调用时，参数的类型和数量皆不检查
+3. 在函数调用时，返回值的类型不检查

@@ -13,6 +13,7 @@
 
 context_t InitContext(){
     context_t ctx = malloc(sizeof(struct _context_t));
+    ctx->loop_depth = 0;
     ctx->sym = malloc(8192 * sizeof(token_t));
     ctx->sym_idx = 0;
     ctx->sym_loc = NULL;
@@ -153,6 +154,21 @@ void SymEndloc(context_t ctx){
     }
     ctx->sym_idx = ctx->sym_loc - ctx->sym;
     ctx->sym_loc = NULL; // reset local symbol table pointer
+}
+
+
+void SymStartLoop(context_t ctx){
+    ctx->loop_depth++;
+}
+
+
+void SymEndLoop(context_t ctx){
+    ctx->loop_depth--;
+}
+
+
+int SymLoopDepth(context_t ctx){
+    return ctx->loop_depth;
 }
 
 
