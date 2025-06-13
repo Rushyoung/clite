@@ -1,7 +1,7 @@
 #ifndef __TOKEN_H__
 #define __TOKEN_H__
 
-#include <stdint.h>
+#include <stddef.h>
 
 typedef enum {
     TK_NUM = 128, // 数字
