@@ -24,13 +24,13 @@ context_t InitContext(){
     ctx->btcode_cur = ctx->btcode;
 
     char* builtin = 
-    "char else enum for if int return sizeof while void "
+    "break char continue do else enum for if int return sizeof while void "
     "main open read close printf input malloc "
     "free memset memcmp exit time sleep rand "
     "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX";
-    scanner keyword = InitScanner(175, builtin);
+    scanner keyword = InitScanner(193, builtin);
 
-    for(int ids = TK_CHAR; ids <= TK_VOID; ids++){
+    for(int ids = TK_BREAK; ids <= TK_VOID; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].tk = ids;
     }

@@ -66,7 +66,7 @@ void run(context_t ctx){
                 ax = *(bp - 1); // 获取函数地址
                 *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
                 if(ax < 65535 && *(ctx->btcode + ax) == OP_FUNC){
-                    pc = ctx->btcode + ax;
+                    pc = ctx->btcode + ax + 1;
                     break;
                 } else if(is_native(ax)){
                     NativeFn fn = (NativeFn)ax;

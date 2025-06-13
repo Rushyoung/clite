@@ -11,7 +11,10 @@ typedef enum {
     TK_LOC,       // 局部变量
     TK_ID,        // 标识符
     TK_STR,       // 字符串
-    TK_CHAR,      // 字符
+    TK_BREAK,     // break 关键字
+    TK_CHAR,      // char 关键字
+    TK_CONTINUE,  // continue 关键字
+    TK_DO,        // do 关键字
     TK_ELSE,      // else 关键字
     TK_ENUM,      // enum 关键字
     TK_FOR,       // for 关键字
