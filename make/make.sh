@@ -6,6 +6,12 @@ g="\033[38;5;46m"
 y="\033[38;5;226m"
 R="\033[m"
 
+# 检查平台，确保是 Linux
+if [[ "$(uname -s)" != "Linux" ]]; then
+    echo "[Error]: This script is only supported on Linux."
+    exit 1
+fi
+
 # 检查 GCC 是否安装
 command -v gcc &> /dev/null
 if [ $? -ne 0 ]; then
