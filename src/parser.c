@@ -559,14 +559,23 @@ static void stmt_dowhile(ParseFunctionArgs) {
     SymStartLoop(ctx);
     parse_stmt(ctx, sc);
     SymEndLoop(ctx);
+    emit(ctx, OP_JMP);
+    uint64_t* addr_j1 = blank(ctx); // 留白，跳转到条件检查
+    uint64_t* addr_cond = ctx->btcode_cur;
     expect(ctx, sc, TK_WHILE, "Expected 'while' after 'do'");
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
     emit(ctx, OP_NOT);
-    emit(ctx, OP_JZ); // 如果条件非假，跳回循环开始
-    emit(ctx, addr_start - ctx->btcode); // 跳转到循环开始
-    emit(ctx, OP_LOOP);
+    emit(ctx, OP_JZ); 
+    emit(ctx, addr_start - ctx->btcode); // 如果条件非假，跳转到循环开始
+    emit(ctx, OP_JMP);
+    uint64_t* addr_end = blank(ctx); // 留白，跳转到循环结束
+    patch(ctx, addr_j1, ctx->btcode_cur - ctx->btcode); // 填充跳转地址
+    emit(ctx, OP_JMP);
+    emit(ctx, addr_cond - ctx->btcode); // 跳转到条件检查
+    patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode); // 填充循环结束地址
+    emit(ctx, OP_LOOP); // 循环结束指令
 }
 
 // 解析 for 循环语句
