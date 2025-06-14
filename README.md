@@ -7,11 +7,11 @@ Clite is a subset of C that includes the following features:
 - Basic data types: `int`, `char`, `void`, and their pointers, enums and arrays is mostly supported. 
 - Basic operators: arithmetic operators (`+`, `-`, `*`, `/`, `%`), relational operators (`<`, `<=`, `>`, `>=`, `==`, `!=`), logical operators (`&&`, `||`, `!`), bitwise operators (`&`, `|`, `^`, `~`), and assignment operators (`=`).
 - Basic variables: global variables, local variables, and function parameters.
-- Control flow: `if`, `else`, `while`
+- Control flow: `if`, `else`, `while`, `do-while`, `for`, `break`, `continue`, and `return`.
 - Functions: function definitions, function calls, and return values.
-- built-in functions: `printf`, `open`, `malloc`, `free`, `exit`, `memset`, `memcpy`, `input`
+- built-in functions: `printf`, `open`, `malloc`, `free`, `exit`, `memset`, `memcpy`, `input`, `rand`, `time`, `sleep`.
 
-Actually, the subset likes the [C4](https://github.com/rswier/c4) project.  
+The subset likes the [C4](https://github.com/rswier/c4) project, but now is bigger than it.  
 This project is rewritten from `C4` in a more easy-to-read way, and the code is more modularized.  
 But sadly, the project is not self-compiled. QAQ  
 
@@ -38,7 +38,7 @@ Do not finish this step.
 | int  | 整数     | 是    |
 | char | 字符     | 是    |
 | void | 无类型   | 是    |
-| enum | 全局匿名枚举（先不写）|
+| enum | 全局匿名枚举 |
 
 
 
