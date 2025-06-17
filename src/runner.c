@@ -42,9 +42,6 @@ void run(context_t ctx){
                 break;
             case OP_S_LOC:
                 *(bp + *pc) = ax;
-                if(sp < bp + *pc + 1){
-                    sp = bp + *pc + 1; // 更新栈指针
-                }
                 pc++;
                 break;
             case OP_IMM:

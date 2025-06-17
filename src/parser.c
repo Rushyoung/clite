@@ -531,8 +531,7 @@ static void stmt_decl(ParseFunctionArgs) {
             emit(ctx, OP_IMM);
             emit(ctx, 0);
         }
-        emit(ctx, OP_S_LOC); 
-        emit(ctx, id->val);
+        emit(ctx, OP_PUSH); 
     }while(match(ctx, sc, TK_COMMA));
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after variable declaration"); // 确保以分号结尾
 }
