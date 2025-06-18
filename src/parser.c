@@ -36,6 +36,7 @@ static void expr_offset(ParseFunctionArgs);
 static void expr_list(ParseFunctionArgs);
 static void expr_assign(ParseFunctionArgs);
 static void expr_ternary(ParseFunctionArgs);
+static void expr_sizeof(ParseFunctionArgs);
 
 static void stmt_expr(ParseFunctionArgs);
 static void stmt_block(ParseFunctionArgs);
@@ -62,7 +63,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_IF]        = {NULL,            NULL,           PREC_NONE },
     [TK_INT]       = {NULL,            NULL,           PREC_NONE },
     [TK_RETURN]    = {NULL,            NULL,           PREC_NONE },
-    [TK_SIZEOF]    = {NULL,            NULL,           PREC_NONE },
+    [TK_SIZEOF]    = {expr_sizeof,     NULL,           PREC_NONE },
     [TK_WHILE]     = {NULL,            NULL,           PREC_NONE },
     [TK_VOID]      = {NULL,            NULL,           PREC_NONE },
     [TK_ASSIGN]    = {NULL,            expr_assign,    PREC_ASSIGNMENT },
@@ -372,6 +373,30 @@ static void expr_variable(ParseFunctionArgs) {
     emit(ctx, id->val);
 }
 
+static void expr_sizeof(ParseFunctionArgs) { // to fix bug
+    emit(ctx, OP_IMM);
+    expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'sizeof'");
+    if(match(ctx, sc, TK_ID)){
+        token_t* id = SymFind(ctx, prev(sc));
+        if(id->class == 0) {
+            raise(sc->line, "Identifier not declared before use");
+        }
+        if(id->class == TK_FUN){
+            emit(ctx, 8);
+        } else {
+            emit(ctx, (id->type == TP_VOID || id->type == TP_CHAR) ? 1 : 8); // 函数或指针类型为 8 字节，其他类型为 1 字节
+        }
+    } else {
+        expect(ctx, sc, TK_INT, "Expected type after 'sizeof'");
+        int type = __ctype(ctx, sc); // 解析类型
+        if(type == TP_VOID) {
+            raise(sc->line, "Cannot use sizeof on void type");
+        }
+        emit(ctx, (type == TP_CHAR || type == TP_VOID) ? 1 : 8); // char 和 void 类型为 1 字节，其他类型为 8 字节
+    }
+    expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'sizeof' expression");
+}
+
 // 解析函数调用表达式
 static void expr_call(ParseFunctionArgs) {
     emit(ctx, OP_SAD);
@@ -513,7 +538,7 @@ static void stmt_decl(ParseFunctionArgs) {
     }
     int real_type = base_type;
     do{
-        token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
+        token_t* id =  (ctx, sc, &real_type); // 解析标识符
         if(id->class == TK_LOC) {
             raise(sc->line, "Variable '%.*s' already defined", id->len, id->name);
         } else if(id->class == TK_GLO || id->class == TK_FUN || id->class == TK_SYS) {
