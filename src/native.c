@@ -167,7 +167,7 @@ uint64_t lite_sleep(NativeFunctionArgs) {
         fprintf(stderr, "lite_sleep requires non-negative argument\n");
         exit(EXIT_FAILURE);
     }
-    sleep(seconds);
+    usleep(seconds * 1000000);
     return 0;
 }
 
