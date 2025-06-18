@@ -7,14 +7,15 @@
 #include <fcntl.h>
 #include <time.h>
 
-#include "opcode.h"
+#define assert(cond, msg) \
+    if (!(cond)) { \
+        fprintf(stderr, msg); \
+        exit(EXIT_FAILURE); \
+    }
 
 
 uint64_t lite_open(NativeFunctionArgs) {
-    if (arity != 2) {
-        fprintf(stderr, "lite_open requires 2 argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 2, "lite_open requires 2 arguments");
     char *filename = (char *)(bp[0]);
     int flags = (int)(bp[1]);
     int fd = open(filename, flags);
@@ -27,10 +28,7 @@ uint64_t lite_open(NativeFunctionArgs) {
 
 
 uint64_t lite_read(NativeFunctionArgs) {
-    if (arity != 3) {
-        fprintf(stderr, "lite_read requires 3 arguments\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 3, "lite_read requires 3 arguments");
     int fd = (int)(bp[0]);
     char *buffer = (char *)(bp[1]);
     uint32_t size = (uint32_t)(bp[2]);
@@ -44,10 +42,7 @@ uint64_t lite_read(NativeFunctionArgs) {
 
 
 uint64_t lite_close(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_close requires 1 argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 1, "lite_close requires 1 argument");
     int fd = (int)(bp[0]);
     if (close(fd) < 0) {
         perror("close");
@@ -58,20 +53,15 @@ uint64_t lite_close(NativeFunctionArgs) {
 
 
 uint64_t lite_printf(NativeFunctionArgs) {
-    if(arity > 6){
-        fprintf(stderr, "lite_printf supports up to 6 arguments\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity >= 1, "lite_printf must have the format string as the first argument");
+    assert(arity <= 6, "lite_printf supports up to 6 arguments");
     printf(bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
     return 0;
 }
 
 
 uint64_t lite_input(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_input requires 1 argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 1, "lite_input requires 1 argument");
     char *buffer = (char *)(bp[0]);
     ssize_t bytes_read = read(STDIN_FILENO, buffer, 1024);
     if (bytes_read < 0) {
@@ -84,10 +74,7 @@ uint64_t lite_input(NativeFunctionArgs) {
 
 
 uint64_t lite_malloc(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_malloc requires 1 argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 1, "lite_malloc requires 1 argument");
     size_t size = (size_t)(bp[0]);
     void *ptr = malloc(size);
     if (!ptr) {
@@ -99,10 +86,7 @@ uint64_t lite_malloc(NativeFunctionArgs) {
 
 
 uint64_t lite_free(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_free requires 1 argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 1, "lite_free requires 1 argument");
     void *ptr = (void *)(bp[0]);
     free(ptr);
     return 0;
@@ -110,10 +94,7 @@ uint64_t lite_free(NativeFunctionArgs) {
 
 
 uint64_t lite_memset(NativeFunctionArgs) {
-    if (arity != 3) {
-        fprintf(stderr, "lite_memset requires 3 arguments\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 3, "lite_memset requires 3 arguments");
     void *ptr = (void *)(bp[0]);
     int value = (int)(bp[1]);
     size_t size = (size_t)(bp[2]);
@@ -123,10 +104,7 @@ uint64_t lite_memset(NativeFunctionArgs) {
 
 
 uint64_t lite_memcmp(NativeFunctionArgs) {
-    if (arity != 3) {
-        fprintf(stderr, "lite_memcmp requires 3 arguments\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 3, "lite_memcmp requires 3 arguments");
     void *ptr1 = (void *)(bp[0]);
     void *ptr2 = (void *)(bp[1]);
     size_t size = (size_t)(bp[2]);
@@ -135,39 +113,31 @@ uint64_t lite_memcmp(NativeFunctionArgs) {
 
 
 uint64_t lite_exit(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_exit requires 1 argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 1, "lite_exit requires 1 argument");
     int status = (int)(bp[0]);
     exit(status);
 }
 
 
 uint64_t lite_time(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_time requires 1 arguments\n");
-        exit(EXIT_FAILURE);
-    }
-    if(bp[0] != 0) {
-        fprintf(stderr, "lite_time donot support non-zero argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 1, "lite_time requires 1 argument");
+    assert(bp[0] == 0, "lite_time does not support non-zero argument");
     return (uint64_t)time(NULL); // return current time in seconds
 }
 
 
 uint64_t lite_sleep(NativeFunctionArgs) {
-    if (arity != 1) {
-        fprintf(stderr, "lite_sleep requires 1 argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 1, "lite_sleep requires 1 argument");
     int seconds = (int)(bp[0]);
     if (seconds < 0) {
         fprintf(stderr, "lite_sleep requires non-negative argument\n");
         exit(EXIT_FAILURE);
     }
-    usleep(seconds * 1000000);
+#ifdef _WIN32
+    _sleep(seconds * 1000); // Windows uses milliseconds
+#else
+    sleep(seconds);
+#endif
     return 0;
 }
 
