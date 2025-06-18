@@ -4,7 +4,6 @@
 
 int main(){
     int end;
-    printf("time = %d\n", end = time(NULL));
     int fd = open("./example/file.c", 0);
     if (fd < 0) 
         fd = open("./file.c", 0);
@@ -28,6 +27,4 @@ int main(){
     printf("Read %d bytes from self.c:\n\n", bytesRead);
     printf("%.*s\n", bytesRead, buffer);
     free(buffer);
-    printf("time = %d\n", end = time(NULL));
-
 }

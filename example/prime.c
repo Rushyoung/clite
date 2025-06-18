@@ -24,6 +24,8 @@ int number(char* str) {
 
 
 int main(){
+    printf("will check if the number and the next 10 numbers are prime.\n");
+    printf("Enter a number: ");
     char* get = "                      ";
     input(get);
     int n = number(get);

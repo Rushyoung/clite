@@ -538,7 +538,7 @@ static void stmt_decl(ParseFunctionArgs) {
     }
     int real_type = base_type;
     do{
-        token_t* id =  (ctx, sc, &real_type); // 解析标识符
+        token_t* id =  __identifier(ctx, sc, &real_type); // 解析标识符
         if(id->class == TK_LOC) {
             raise(sc->line, "Variable '%.*s' already defined", id->len, id->name);
         } else if(id->class == TK_GLO || id->class == TK_FUN || id->class == TK_SYS) {

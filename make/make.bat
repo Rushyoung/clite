@@ -7,6 +7,8 @@ set "i=%esck%[38;5;46m"
 set "w=%esck%[38;5;226m"
 set "R=%esck%[m"
 
+
+
 tcc --version >nul 2>&1
 if errorlevel 1 (
     echo [%w%Warning%R%]: TCC ^(Tiny C Compiler^) is not installed or not found in PATH.
@@ -59,3 +61,23 @@ if errorlevel 1 (
 
 echo [%i%Info%R%]: linking object files...
 echo [%i%Info%R%]: build completed successfully!
+
+if /I "%1"=="test" (
+    goto:test
+)
+
+exit /b 0
+
+
+:test
+echo [%i%Info%R%]: Running tests...
+for %%i in (example\*.c) do (
+    echo [%i%Info%R%]: Testing %%~nxi...
+    build\clite.exe %%i
+    if errorlevel 1 (
+        echo [%e%Error%R%]: Test failed for %%~nxi.
+        exit /b 1
+    ) else (
+        echo [%i%Info%R%]: Test passed for %%~nxi.
+    )
+)
