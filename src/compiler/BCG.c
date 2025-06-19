@@ -54,7 +54,7 @@ static void parse_stmt(context_t ctx, scanner sc);
 static void parse_enum(context_t ctx, scanner sc);
 static void parse_global(context_t ctx, scanner sc);
 
-ParseRule Rules[] = {//infix,          prefix,         precedence
+static ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
     [TK_FUN]       = {NULL,            NULL,           PREC_NONE },
     [TK_SYS]       = {NULL,            NULL,           PREC_NONE },

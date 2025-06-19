@@ -49,7 +49,12 @@ static void stmt_dowhile(ParseFunctionArgs);
 static void stmt_break(ParseFunctionArgs);
 static void stmt_continue(ParseFunctionArgs);
 
-ParseRule Rules[] = {//infix,          prefix,         precedence
+static void parse_expr(context_t ctx, scanner sc, PrecLv level);
+static void parse_stmt(context_t ctx, scanner sc);
+static void parse_enum(context_t ctx, scanner sc);
+static void parse_global(context_t ctx, scanner sc);
+
+static ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
     [TK_FUN]       = {NULL,            NULL,           PREC_NONE },
     [TK_SYS]       = {NULL,            NULL,           PREC_NONE },
@@ -464,7 +469,7 @@ static void expr_list(ParseFunctionArgs) {
 }
 
 // 根据优先级解析表达式
-void parse_expr(context_t ctx, scanner sc, PrecLv level) {
+static void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx);
     ParseFn prefixFn = Rules[prev(sc).tk].prefix; 
     if(prefixFn == NULL) {
@@ -661,7 +666,7 @@ static void stmt_if(ParseFunctionArgs){
 }
 
 // 解析单个语句
-void parse_stmt(context_t ctx, scanner sc) {
+static void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         stmt_if(ctx, sc, 1); // 解析 if 语句
     } else if(match(ctx, sc, TK_WHILE)) {
@@ -687,7 +692,7 @@ void parse_stmt(context_t ctx, scanner sc) {
     }
 }
 
-void parse_enum(context_t ctx, scanner sc){
+static void parse_enum(context_t ctx, scanner sc){
     expect(ctx, sc, TK_LE_BRACE, "Expected '{' after 'enum' declaration");
     int enum_value = 0;
     while(!match(ctx, sc, TK_RI_BRACE)){
@@ -713,7 +718,7 @@ void parse_enum(context_t ctx, scanner sc){
 }
 
 // 解析全局声明 (变量或函数)
-void parse_global(context_t ctx, scanner sc) {
+static void parse_global(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_ENUM)) {
         parse_enum(ctx, sc); // 解析枚举声明
         return;
@@ -784,7 +789,7 @@ void parse_global(context_t ctx, scanner sc) {
 }
 
 // 编译源代码，生成字节码
-void compile(context_t ctx, scanner sc) {
+void AOT_compile(context_t ctx, scanner sc) {
     next(sc, ctx); // 开始解析，扫描第一个token
     while(!match(ctx, sc, 0)) {
         parse_global(ctx, sc);// 全局声明

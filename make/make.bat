@@ -45,7 +45,16 @@ md build 2> nul | del /Q build\*
 
 for %%i in (src/*.c) do (
     echo [%i%Info%R%]: Compiling %%~nxi...
-    %cc% -c -o build\%%~ni.o src/%%i -Iinclude %CFLAGS% -DVERSION=%VERSION%
+    %cc% -c -o build/%%~ni.o src/%%i -Iinclude %CFLAGS% -DVERSION=%VERSION%
+    if errorlevel 1 (
+        echo [%e%Error%R%]: Compilation failed for %%~nxi.
+        exit /b 1
+    )
+)
+
+for %%i in (src/compiler/*.c) do (
+    echo [%i%Info%R%]: Compiling %%~nxi...
+    %cc% -c -o build/%%~ni.o src/compiler/%%i -Iinclude %CFLAGS% -DVERSION=%VERSION%
     if errorlevel 1 (
         echo [%e%Error%R%]: Compilation failed for %%~nxi.
         exit /b 1
