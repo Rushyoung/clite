@@ -10,6 +10,10 @@
 
 #include "token.h"
 
+// micro "VERSION" likes 0.80.0, make it a string
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 
 context_t InitContext(){
     context_t ctx = malloc(sizeof(struct _context_t));
@@ -19,7 +23,8 @@ context_t InitContext(){
     ctx->sym_loc = NULL;
 
     ctx->heap = calloc(65536, 1);
-    ctx->heap_cur = 0;
+    ctx->heap_cur = strlen(TOSTRING(VERSION)) + 1;
+    memcpy(ctx->heap, TOSTRING(VERSION), ctx->heap_cur);
 
     ctx->btcode = calloc(65536 * sizeof(uint64_t), 1);
     ctx->btcode_cur = ctx->btcode;
@@ -28,8 +33,8 @@ context_t InitContext(){
     "break char continue do else enum for if int return sizeof while void "
     "main open read close printf input malloc "
     "free memset memcmp exit time sleep rand "
-    "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX";
-    scanner keyword = InitScanner(193, builtin);
+    "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX __VERSION__";
+    scanner keyword = InitScanner(strlen(builtin), builtin);
 
     for(int ids = TK_BREAK; ids <= TK_VOID; ids++){
         next(keyword, ctx);
@@ -38,7 +43,6 @@ context_t InitContext(){
 
     next(keyword, ctx);
     ctx->sym[ctx->sym_idx - 1].tk = TK_ID;    // main function identifier
-    ctx->sym[ctx->sym_idx - 1].val = 0;
     ctx->main_id = ctx->sym_idx - 1;          // store main function index
 
     NativeFn native_functions[] = {
@@ -54,9 +58,9 @@ context_t InitContext(){
     }
     
     uint64_t constants[] = {
-        EXIT_SUCCESS, EXIT_FAILURE, NULL, EOF, RAND_MAX
+        EXIT_SUCCESS, EXIT_FAILURE, NULL, EOF, RAND_MAX, ctx->heap
     };
-    for(int ids = 0; ids < 5; ids++){
+    for(int ids = 0; ids < 6; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system constants
         ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all constants are int

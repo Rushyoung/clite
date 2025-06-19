@@ -8,7 +8,6 @@ set "w=%esck%[38;5;226m"
 set "R=%esck%[m"
 
 
-
 tcc --version >nul 2>&1
 if errorlevel 1 (
     echo [%w%Warning%R%]: TCC ^(Tiny C Compiler^) is not installed or not found in PATH.
@@ -40,11 +39,13 @@ if not exist main.c (
     exit /b 1
 )
 
+for /F "delims=" %%i in (VERSION.txt) do set "VERSION=%%i"
+
 md build 2> nul | del /Q build\*
 
 for %%i in (src/*.c) do (
     echo [%i%Info%R%]: Compiling %%~nxi...
-    %cc% -c -o build\%%~ni.o src/%%i -Iinclude %CFLAGS%
+    %cc% -c -o build\%%~ni.o src/%%i -Iinclude %CFLAGS% -DVERSION=%VERSION%
     if errorlevel 1 (
         echo [%e%Error%R%]: Compilation failed for %%~nxi.
         exit /b 1
