@@ -60,6 +60,15 @@ int main(int argc, char *argv[]){
         DumpBtcode(ctx);
     }
 
+    if(__args__.savebtcode){
+        FILE* f = fopen("out.btcode", "wb");
+        if(!f){
+            perror("Failed to open output file");
+            exit(EXIT_FAILURE);
+        }
+        fwrite(ctx->btcode, sizeof(uint64_t), ctx->btcode_cur - ctx->btcode, f);
+        fclose(f);
+    }
     run(ctx);
     return 0;
 }

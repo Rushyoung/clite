@@ -191,6 +191,8 @@ void InitArgs(int argc, char* argv[]){
             __args__.bytecode = 1;
         } else if(strcmp(argv[i], "--symboltable") == 0 || strcmp(argv[i], "-s") == 0){ // 添加 symboltable 选项
             __args__.symboltable = 1;
+        } else if(strcmp(argv[i], "--compile") == 0 || strcmp(argv[i], "-c") == 0){
+            __args__.savebtcode = 1;
         } else if(__args__.inputs == NULL){
             __args__.inputs = argv[i];
         } else {

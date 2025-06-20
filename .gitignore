@@ -1,6 +1,7 @@
 .vscode
 
 build
+test
 
 c4.c
 hello.c
