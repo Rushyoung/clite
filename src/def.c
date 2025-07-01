@@ -30,7 +30,7 @@ context_t InitContext(){
     ctx->btcode_cur = ctx->btcode;
 
     char* builtin = 
-    "break char continue do else enum for if int return sizeof while void "
+    "break char continue do else enum for if int return sizeof static while void "
     "main open read close printf input malloc "
     "free memset memcmp exit time sleep rand "
     "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX __VERSION__";

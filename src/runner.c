@@ -66,13 +66,9 @@ void run(context_t ctx){
                 if(ax < 65535 && *(ctx->btcode + ax) == OP_FUNC){
                     pc = ctx->btcode + ax + 1;
                     break;
-                } else if(is_native(ax)){
+                } else {
                     NativeFn fn = (NativeFn)ax;
                     ax = fn(bp, *pc);
-                } else {
-                    fprintf(stderr, "Unknown function call at %lld\n", ax);
-                    free(stk);
-                    exit(EXIT_FAILURE);
                 }
             case OP_RET:
                 if(bp == stk){

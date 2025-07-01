@@ -22,6 +22,7 @@ typedef enum {
     TK_INT,       // int 关键字
     TK_RETURN,    // return 关键字
     TK_SIZEOF,    // sizeof 关键字
+    TK_STATIC,    // static 关键字
     TK_WHILE,     // while 关键字
     TK_VOID,      // void 关键字
     TK_ASSIGN,    // 赋值操作符 '='

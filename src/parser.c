@@ -4,14 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "compiler.h"
 #include "def.h"
 #include "native.h"
-#include "opcode.h"
 
+#include "opcode.h"
 #include "scanner.h"
 #include "token.h"
-
-#include "debug.h"
 
 #define raise(l, ...) ({ \
     printf("line: %lld\n", (l)); \
@@ -134,7 +133,6 @@ static int __ctype(context_t ctx, scanner sc) {
             type = TP_VOID;
             break;
         default:
-            DumpToken(ctx, tk);
             raise(sc->line, "Expected type declaration (int, char, void)");
     }
     next(sc, ctx); // 跳过类型声明
@@ -718,6 +716,7 @@ void parse_global(context_t ctx, scanner sc) {
         parse_enum(ctx, sc); // 解析枚举声明
         return;
     }
+    int in_static = match(ctx, sc, TK_STATIC); // 检查是否为静态变量，仅对函数生效。将函数jit编译为静态函数
     int base_type = TP_INT; // 基本类型，默认为整型
     int real_type = TP_INT; // 实际类型，默认为整型
     real_type = base_type = __ctype(ctx, sc); // 解析类型声明
@@ -757,6 +756,9 @@ void parse_global(context_t ctx, scanner sc) {
         emit(ctx, 0);
         emit(ctx, OP_RET);
         patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充函数结束地址
+        if(in_static) {
+            id->val = compile(ctx, id->val, ctx->btcode_cur);
+        }
     } else {
         define_loop:
         id->class = TK_GLO; 
@@ -784,7 +786,7 @@ void parse_global(context_t ctx, scanner sc) {
 }
 
 // 编译源代码，生成字节码
-void compile(context_t ctx, scanner sc) {
+void parse(context_t ctx, scanner sc) {
     next(sc, ctx); // 开始解析，扫描第一个token
     while(!match(ctx, sc, 0)) {
         parse_global(ctx, sc);// 全局声明
