@@ -5,7 +5,7 @@
 
 void* allocate(size_t size);
 
-void* compile(context_t ctx, size_t bt_start, size_t bt_end);
+uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end);
 
 
 #endif//__COMPILER_H__

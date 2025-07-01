@@ -162,21 +162,3 @@ uint64_t buildin_list(NativeFunctionArgs) {
     }
     return (uint64_t)list; // return pointer to the list
 }
-
-
-int is_native(uint64_t func) {
-    return func == lite_close ||
-           func == lite_open ||
-           func == lite_read ||
-           func == lite_printf ||
-           func == lite_input ||
-           func == buildin_list ||
-           func == lite_malloc ||
-           func == lite_free ||
-           func == lite_memset ||
-           func == lite_memcmp ||
-           func == lite_time ||
-           func == lite_sleep ||
-           func == lite_rand ||
-           func == lite_exit;
-}
