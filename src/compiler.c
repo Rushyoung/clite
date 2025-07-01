@@ -48,9 +48,7 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0xB8); emit_i(0);    // mov RAX, 0x00; RAX 是返回值
                 break;
             case OP_G_LOC:
-                // mov RBX, 9
-                // mov RAX, [RDI + RBX * 8]
-                emit_a(0x48); emit_a(0xBB); emit_a(pc); // mov RBX, immediate value
+                emit_a(0x48); emit_a(0xBB); emit_i(*pc);                // mov RBX, immediate value
                 emit_a(0x48); emit_a(0x8B); emit_a(0x04); emit_a(0xDF); // mov RAX, [RDI + RBX * 8]
                 pc++;
                 break;
@@ -59,15 +57,22 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
                 pc++;
                 break;
             case OP_PUSH:
-                emit_a(0x48); emit_a(0x89); emit_a(0xF6);               // mov RSI, RAX; 将 RAX 的值压栈
+                emit_a(0x48); emit_a(0x89); emit_a(0x06);               // mov [RSI], RAX; 将 RAX 的值压栈
                 emit_a(0x48); emit_a(0x83); emit_a(0xC6); emit_a(0x08); // add RSI, 8; 栈顶指针加8
                 break;
             case OP_ADD:
-                // mov RBX, [RSI - 8] // 获取栈顶的值
-                // add RAX, RBX // 将 RAX 和栈顶的值相加
-                // SUB RSI, 8 // 栈顶指针减8
                 emit_a(0x48); emit_a(0x8B); emit_a(0x5E); emit_a(0xF8); // mov RBX, [RSI - 8]
-                emit_a(0x48); emit_a(0x03); emit_a(0xC3); // add RAX, RBX
+                emit_a(0x48); emit_a(0x03); emit_a(0xC3);               // add RAX, RBX
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                break;
+            case OP_SUB:
+                emit_a(0x48); emit_a(0x8B); emit_a(0x5E); emit_a(0xF8); // mov RBX, [RSI - 8]
+                emit_a(0x48); emit_a(0x29); emit_a(0xC3);               // sub RAX, RBX
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                break;
+            case OP_MUL:
+                emit_a(0x48); emit_a(0x8B); emit_a(0x5E); emit_a(0xF8); // mov RBX, [RSI - 8]
+                emit_a(0x48); emit_a(0x0F); emit_a(0xAF); emit_a(0xC3); // imul RAX, RBX
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
                 break;
             case OP_RET:
