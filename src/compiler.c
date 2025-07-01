@@ -76,6 +76,7 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0xBB); emit_i(ctx->heap); // mov RBX, heap base address
                 emit_a(0x48); emit_a(0x03); emit_a(0xC3);      // add RAX, RBX; 将 RAX 的值加上堆基址
                 break;
+            case OP_SAD:
             case OP_PUSH:
                 emit_a(0x48); emit_a(0x89); emit_a(0x06);               // mov [RSI], RAX; 将 RAX 的值压栈
                 emit_a(0x48); emit_a(0x83); emit_a(0xC6); emit_a(0x08); // add RSI, 8; 栈顶指针加8
@@ -103,24 +104,22 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x99);  // cqo // 扩展 RAX 到 RDX:RAX
                 emit_a(0x48); emit_a(0xF7); emit_a(0xFB); // idiv RBX; 除法，结果在 RAX 中
                 break;
-            case OP_SAD:
-                break;
             case OP_CALL:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEC); emit_a(0x28); // sub rsp, 40 // 对齐40字节栈空间
                 emit_a(0x57); // push RDI // 保存基址bp
                 emit_a(0x56); // push RSI // 保存栈顶sp
+                emit_a(0x49); emit_a(0xBA); emit_i(*pc); // mov R10, argc(imm64)
                 emit_a(0x48); emit_a(0x89); emit_a(0xF1); // mov RCX, RSI
-                emit_a(0x48); emit_a(0xBA); emit_i(*pc);  // mov RDX, immediate value
+                emit_a(0x4C); emit_a(0x89); emit_a(0xD2); // mov RDX, R10
                 emit_a(0x48); emit_a(0xC1); emit_a(0xE2); emit_a(0x03); // shl RDX, 3
                 emit_a(0x48); emit_a(0x29); emit_a(0xD1); // sub RCX, RDX
-                emit_a(0x48); emit_a(0x83); emit_a(0xE9); emit_a(0x08); // sub RCX, 8
-                emit_a(0x48); emit_a(0xBA); emit_i(*pc);  // mov RDX, immediate value
-                emit_a(0x48); emit_a(0x8B); emit_a(0x01); // mov RAX, [RCX] // 获取函数地址
-                // now replace rax as printf for debug
-                // emit_a(0x48); emit_a(0xB8); emit_i(ctx->sym[18].val);
+                emit_a(0x48); emit_a(0x8B); emit_a(0x41); emit_a(0xF8); // mov RAX, [RCX-8]
+                emit_a(0x4C); emit_a(0x89); emit_a(0xD2); // mov RDX, R10
                 emit_a(0xFF); emit_a(0xD0); // call RAX
+                emit_a(0x48); emit_a(0x8D); emit_a(0x71); emit_a(0xF8); // lea RSI, [RCX-8]
                 emit_a(0x5E); // pop RSI // 恢复栈顶sp
-                emit_a(0x5F); // pop RDI // 恢复基址
-                printf("call function with %llu args\n", *pc);
+                emit_a(0x5F); // pop RDI // 恢复基址bp
+                emit_a(0x48); emit_a(0x83); emit_a(0xC4); emit_a(0x28); // add rsp, 40
                 pc++;
                 break;
             case OP_RET:
