@@ -55,8 +55,7 @@ uint64_t lite_close(NativeFunctionArgs) {
 uint64_t lite_printf(NativeFunctionArgs) {
     assert(arity >= 1, "lite_printf must have the format string as the first argument");
     assert(arity <= 6, "lite_printf supports up to 6 arguments");
-    printf(bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
-    return 0;
+    return printf(bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
 }
 
 
