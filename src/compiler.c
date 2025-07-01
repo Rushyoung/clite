@@ -1,6 +1,7 @@
 #include "compiler.h"
 
 #include "opcode.h"
+#include "native.h"
 
 #include <stdio.h>
 #ifdef _WIN32
@@ -47,39 +48,86 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x8D); emit_a(0x34); emit_a(0xD6); // lea RSI, [RSI + RDX * 8]; RDX 是参数个数
                 emit_a(0x48); emit_a(0xB8); emit_i(0);    // mov RAX, 0x00; RAX 是返回值
                 break;
+            case OP_G_GLO:
+                emit_a(0x48); emit_a(0xB8); emit_i(&(ctx->sym[*pc].val)); // mov RAX, global address
+                emit_a(0x48); emit_a(0x8B); emit_a(0x00);                 // mov RAX, [RAX]
+                pc++;
+                break;
+            case OP_S_GLO:
+                emit_a(0x48); emit_a(0xBB); emit_i(&(ctx->sym[*pc].val)); // mov RBX, global address
+                emit_a(0x48); emit_a(0x89); emit_a(0x03);                 // mov [RBX], RAX
+                pc++;
+                break;
             case OP_G_LOC:
                 emit_a(0x48); emit_a(0xBB); emit_i(*pc);                // mov RBX, immediate value
                 emit_a(0x48); emit_a(0x8B); emit_a(0x04); emit_a(0xDF); // mov RAX, [RDI + RBX * 8]
+                pc++;
+                break;
+            case OP_S_LOC:
+                emit_a(0x48); emit_a(0xBB); emit_i(*pc);                // mov RBX, immediate value
+                emit_a(0x48); emit_a(0x89); emit_a(0x04); emit_a(0xDF);
                 pc++;
                 break;
             case OP_IMM:
                 emit_a(0x48); emit_a(0xB8); emit_i(*pc); // mov RAX, immediate value
                 pc++;
                 break;
+            case OP_STR:
+                emit_a(0x48); emit_a(0xBB); emit_i(ctx->heap); // mov RBX, heap base address
+                emit_a(0x48); emit_a(0x03); emit_a(0xC3);      // add RAX, RBX; 将 RAX 的值加上堆基址
+                break;
             case OP_PUSH:
                 emit_a(0x48); emit_a(0x89); emit_a(0x06);               // mov [RSI], RAX; 将 RAX 的值压栈
                 emit_a(0x48); emit_a(0x83); emit_a(0xC6); emit_a(0x08); // add RSI, 8; 栈顶指针加8
                 break;
             case OP_ADD:
-                emit_a(0x48); emit_a(0x8B); emit_a(0x5E); emit_a(0xF8); // mov RBX, [RSI - 8]
-                emit_a(0x48); emit_a(0x03); emit_a(0xC3);               // add RAX, RBX
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x03); emit_a(0xC3);               // add RAX, RBX
                 break;
             case OP_SUB:
-                emit_a(0x48); emit_a(0x8B); emit_a(0x5E); emit_a(0xF8); // mov RBX, [RSI - 8]
-                emit_a(0x48); emit_a(0x29); emit_a(0xC3);               // sub RAX, RBX
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x29); emit_a(0xC3);               // sub RBX, RAX;
+                emit_a(0x48); emit_a(0x89); emit_a(0xD8);               // mov RAX, RBX;
                 break;
             case OP_MUL:
-                emit_a(0x48); emit_a(0x8B); emit_a(0x5E); emit_a(0xF8); // mov RBX, [RSI - 8]
-                emit_a(0x48); emit_a(0x0F); emit_a(0xAF); emit_a(0xC3); // imul RAX, RBX
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x0F); emit_a(0xAF); emit_a(0xC3); // imul RAX, RBX
+                break;
+            case OP_DIV: // RAX/RBX @bug: unused opcode and have bug
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x89); emit_a(0xC3); // mov RBX, RAX
+                emit_a(0x48); emit_a(0x88); emit_a(0x06); // mov RAX, [RSI]
+                emit_a(0x48); emit_a(0x99);  // cqo // 扩展 RAX 到 RDX:RAX
+                emit_a(0x48); emit_a(0xF7); emit_a(0xFB); // idiv RBX; 除法，结果在 RAX 中
+                break;
+            case OP_SAD:
+                break;
+            case OP_CALL:
+                emit_a(0x57); // push RDI // 保存基址bp
+                emit_a(0x56); // push RSI // 保存栈顶sp
+                emit_a(0x48); emit_a(0x89); emit_a(0xF1); // mov RCX, RSI
+                emit_a(0x48); emit_a(0xBA); emit_i(*pc);  // mov RDX, immediate value
+                emit_a(0x48); emit_a(0xC1); emit_a(0xE2); emit_a(0x03); // shl RDX, 3
+                emit_a(0x48); emit_a(0x29); emit_a(0xD1); // sub RCX, RDX
+                emit_a(0x48); emit_a(0x83); emit_a(0xE9); emit_a(0x08); // sub RCX, 8
+                emit_a(0x48); emit_a(0xBA); emit_i(*pc);  // mov RDX, immediate value
+                emit_a(0x48); emit_a(0x8B); emit_a(0x01); // mov RAX, [RCX] // 获取函数地址
+                // now replace rax as printf for debug
+                // emit_a(0x48); emit_a(0xB8); emit_i(ctx->sym[18].val);
+                emit_a(0xFF); emit_a(0xD0); // call RAX
+                emit_a(0x5E); // pop RSI // 恢复栈顶sp
+                emit_a(0x5F); // pop RDI // 恢复基址
+                printf("call function with %llu args\n", *pc);
+                pc++;
                 break;
             case OP_RET:
                 emit_a(0xC3); // ret
                 break;
             default:
-                fprintf(stderr, "Unknown opcode: %llu\n", ip);
+                fprintf(stderr, "Unknown opcode: %llu in %d\n", ip, (int)(pc - ctx->btcode - 1));
                 exit(1);
         }
     }
