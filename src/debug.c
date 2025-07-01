@@ -92,7 +92,6 @@ char* op_name[64] = {
     [OP_DIV] = "OP_DIV",
     [OP_MOD] = "OP_MOD",
     [OP_NOT] = "OP_NOT",
-    [OP_NEGATE] = "OP_NEGATE",
     [OP_STR] = "OP_STR"
 };
 

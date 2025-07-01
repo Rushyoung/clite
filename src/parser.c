@@ -207,7 +207,10 @@ static void expr_unary(ParseFunctionArgs) {
             // 正号，直接返回
             break;
         case TK_SUB:
-            emit(ctx, OP_NEGATE); // 负号，生成取反指令
+            emit(ctx, OP_PUSH);
+            emit(ctx, OP_IMM);
+            emit(ctx, -1);
+            emit(ctx, OP_MUL);
             break;
         case TK_NOT:
             emit(ctx, OP_NOT); // 逻辑非，生成逻辑非指令

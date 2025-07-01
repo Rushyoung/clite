@@ -197,9 +197,6 @@ void run(context_t ctx){
             case OP_NOT:
                 ax = !ax;
                 break;
-            case OP_NEGATE:
-                ax = -ax;
-                break;
             case OP_STR:
                 ax = ctx->heap + ax; // convert to string address
                 break;
