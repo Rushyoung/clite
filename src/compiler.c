@@ -42,14 +42,12 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
     uint64_t* pc = ctx->btcode + bt_start;
     uint64_t  ip = 0;
     uint64_t* end = ctx->btcode + bt_end;
-    uint16_t  bt2jit[4096] = {};   // bt2jit[id] = val， 
-    // 意味着这个函数第id个位置的字节码，在jit的第val个位置
+    uint16_t  bt2jit[4096] = {};   // bt2jit[id] = val，这个函数第id个位置的字节码，在jit的第val个位置
     uint16_t  patch_in[4096] = {}; // patch_in[id] = in
     uint16_t  patch_to[4096] = {}; // patch_to[id] = goal，代表在in个字节处，应该填入一个64位地址
     size_t    patch_count = 0;
     for(ip = *pc; pc < end && ip != 0; ip = *pc) {
         bt2jit[pc - ctx->btcode - bt_start] = (uint16_t)(jit - fun);
-        printf("bt[%llu] = bt2jit[%llu] = %u\n", (unsigned long long)(pc - ctx->btcode), (unsigned long long)(pc - ctx->btcode - bt_start), (unsigned)bt2jit[pc - ctx->btcode - bt_start]);
         pc++;
         if(jit - fun >= 4096) {
             fprintf(stderr, "JIT compilation buffer overflow\n");
@@ -60,7 +58,7 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x89); emit_a(0xCF); // mov RDI, RCX; RDI 是基址bp
                 emit_a(0x48); emit_a(0x89); emit_a(0xFE); // mov RSI, RDI; RSI 是栈顶sp
                 emit_a(0x48); emit_a(0x8D); emit_a(0x34); emit_a(0xD6); // lea RSI, [RSI + RDX * 8]; RDX 是参数个数
-                emit_a(0x48); emit_a(0xB8); emit_i(0);    // mov RAX, 0x00; RAX 常用寄存器
+                emit_a(0x48); emit_a(0x31); emit_a(0xC0); // xor RAX, RAX; 清空 RAX 寄存器
                 break;
             case OP_G_GLO:
                 emit_a(0x48); emit_a(0xB8); emit_i(&(ctx->sym[*pc].val)); // mov RAX, global address
@@ -87,7 +85,6 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 pc++;
                 break;
             case OP_JZ:
-                printf("in OP_JZ\n"); // 强制跳转10字节
                 emit_a(0x48); emit_a(0x85); emit_a(0xC0); // test RAX, RAX; 检查 RAX 是否为 0
                 emit_a(0x0F); emit_a(0x84); emit_v(*pc);  // jz RBX; 如果 RAX 为 0，则跳转到 RBX
                 pc++;
@@ -217,15 +214,8 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
         }
     }
     for(int cur = 0; cur < patch_count; cur++) {
-        // target = bt2jit[patch_to[cur]];
-        // current = patch_in[cur];
-        // len = patch_len[cur];
         int32_t jmp = bt2jit[patch_to[cur]] - (patch_in[cur] + 4);
         uint8_t* patch_addr = fun + patch_in[cur];
         *(uint32_t*)patch_addr = jmp; // 填充跳转地址
-        printf("%llu want to jmp to %u->%u, need %d bytes\n patch", 
-               (unsigned long long)(patch_in[cur] + 4), (unsigned)patch_to[cur],
-               (unsigned)bt2jit[patch_to[cur]], jmp);
-        printf("\n");
     }
 }
