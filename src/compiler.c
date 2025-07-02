@@ -13,6 +13,12 @@
 #define emit_a(x) (*jit++ = (x)) // emit assembler instruction
 #define emit_e(x) ({*(uint32_t*)jit = (x); jit += 4;}) // emit immediate value (32-bit)
 #define emit_i(x) ({*(uint64_t*)jit = (x); jit += 8;}) // emit immediate value
+#define emit_v(x) ({\
+    uint16_t in = (uint16_t)(jit - fun); \
+    uint16_t to = (uint16_t)((x) - bt_start); \
+    patch_in[patch_count] = in; patch_to[patch_count] = to; ; \
+    patch_count++; jit += 4; \
+})
 
 void* jitalloc() {
     #ifdef _WIN32
@@ -31,21 +37,23 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
         fprintf(stderr, "Invalid bytecode range: %zu to %zu\n", bt_start, bt_end);
         exit(EXIT_FAILURE);
     }
-
     uint8_t*  jit = fun; // Save the start of the allocated memory
     uint64_t* pc = ctx->btcode + bt_start;
     uint64_t  ip = 0;
     uint64_t* end = ctx->btcode + bt_end;
-    // 能用的寄存器
-    // RAX, RBX, RCX, RDX, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15
-    // RSI 是栈顶sp，RDI 是基址bp
+    uint16_t  bt2jit[4096] = {};   // bt2jit[id] = val， 
+    // 意味着这个函数第id个位置的字节码，在jit的第val个位置
+    uint16_t  patch_in[4096] = {}; // patch_in[id] = in
+    uint16_t  patch_to[4096] = {}; // patch_to[id] = goal，代表在in个字节处，应该填入一个64位地址
+    size_t    patch_count = 0;
     for(ip = *pc; pc < end && ip != 0; ip = *pc) {
+        bt2jit[pc - ctx->btcode - bt_start] = (uint16_t)(jit - fun);
+        printf("bt[%llu] = bt2jit[%llu] = %u\n", (unsigned long long)(pc - ctx->btcode), (unsigned long long)(pc - ctx->btcode - bt_start), (unsigned)bt2jit[pc - ctx->btcode - bt_start]);
         pc++;
         if(jit - fun >= 4096) {
             fprintf(stderr, "JIT compilation buffer overflow\n");
             exit(1);
         }
-        printf("PC in %llu\n", pc - ctx->btcode - 1);
         switch (ip) {
             case OP_FUNC:
                 emit_a(0x48); emit_a(0x89); emit_a(0xCF); // mov RDI, RCX; RDI 是基址bp
@@ -71,6 +79,16 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
             case OP_S_LOC:
                 emit_a(0x48); emit_a(0xBB); emit_i(*pc);                // mov RBX, immediate value
                 emit_a(0x48); emit_a(0x89); emit_a(0x04); emit_a(0xDF);
+                pc++;
+                break;
+            case OP_JMP:
+                emit_a(0xE9); emit_v(*pc); // jmp address; 跳转到地址
+                pc++;
+                break;
+            case OP_JZ:
+                printf("in OP_JZ\n"); // 强制跳转10字节
+                emit_a(0x48); emit_a(0x85); emit_a(0xC0); // test RAX, RAX; 检查 RAX 是否为 0
+                emit_a(0x0F); emit_a(0x84); emit_v(*pc);  // jz RBX; 如果 RAX 为 0，则跳转到 RBX
                 pc++;
                 break;
             case OP_IMM:
@@ -163,8 +181,10 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
                 emit_a(0x48); emit_a(0xD3); emit_a(0xE8);               // shr RAX, CL; 使用 CL 寄存器作为移位量
                 break;
-            case OP_NOT: //RAX = !RAX, 逻辑非操作, @bug
-                emit_a(0x48); emit_a(0xF7); emit_a(0xD8);               // not RAX; 逻辑非操作
+            case OP_NOT:
+                emit_a(0x48); emit_a(0x85); emit_a(0xC0); // test RAX, RAX
+                emit_a(0x0F); emit_a(0x94); emit_a(0xC0); // sete AL
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0); // movzx RAX, AL
                 break;
             case OP_CALL:
                 emit_a(0x48); emit_a(0x89); emit_a(0xF3); // mov RBX, RSI
@@ -194,5 +214,17 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 fprintf(stderr, "Unknown opcode: %llu in %d\n", ip, (int)(pc - ctx->btcode - 1));
                 exit(1);
         }
+    }
+    for(int cur = 0; cur < patch_count; cur++) {
+        // target = bt2jit[patch_to[cur]];
+        // current = patch_in[cur];
+        // len = patch_len[cur];
+        int32_t jmp = bt2jit[patch_to[cur]] - (patch_in[cur] + 4);
+        uint8_t* patch_addr = fun + patch_in[cur];
+        *(uint32_t*)patch_addr = jmp; // 填充跳转地址
+        printf("%llu want to jmp to %u->%u, need %d bytes\n patch", 
+               (unsigned long long)(patch_in[cur] + 4), (unsigned)patch_to[cur],
+               (unsigned)bt2jit[patch_to[cur]], jmp);
+        printf("\n");
     }
 }
