@@ -92,6 +92,8 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x0F); emit_a(0x84); emit_v(*pc);  // jz RBX; 如果 RAX 为 0，则跳转到 RBX
                 pc++;
                 break;
+            case OP_LOOP:
+                break; // OP_LOOP 仅用于标记循环结束位置
             case OP_IMM:
                 emit_a(0x48); emit_a(0xB8); emit_i(*pc); // mov RAX, immediate value
                 pc++;

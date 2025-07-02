@@ -803,6 +803,10 @@ void parse(context_t ctx, scanner sc) {
         raise(sc->line, "Main function not defined");
     }
 
-    emit(ctx, OP_JMP);
+    emit(ctx, OP_IMM);
     emit(ctx, ctx->sym[ctx->main_id].val);
+    emit(ctx, OP_SAD);
+    emit(ctx, OP_CALL); // 调用主函数
+    emit(ctx, 0); // 主函数没有参数
+    emit(ctx, OP_RET); // 程序结束指令
 }
