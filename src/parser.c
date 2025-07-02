@@ -732,7 +732,11 @@ void parse_global(context_t ctx, scanner sc) {
         emit(ctx, OP_JMP);
         uint64_t* addr = blank(ctx); // 留白，函数结束地址
         id->class = TK_FUN;
-        id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
+        if(in_static){
+            id->val = jitalloc();
+        } else {
+            id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
+        }
         emit(ctx, OP_FUNC); // 函数入口标记
         SymSetloc(ctx);
         int arg_count = 0;
@@ -760,7 +764,7 @@ void parse_global(context_t ctx, scanner sc) {
         emit(ctx, OP_RET);
         patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充函数结束地址
         if(in_static) {
-            id->val = compile(ctx, id->val, ctx->btcode_cur);
+            compile(ctx, id->val, addr - ctx->btcode + 1, ctx->btcode_cur - ctx->btcode); // 编译静态函数
         }
     } else {
         define_loop:

@@ -3,9 +3,9 @@
 
 #include "def.h"
 
-void* allocate(size_t size);
+void* jitalloc();
 
-uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end);
+void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end);
 
 
 #endif//__COMPILER_H__

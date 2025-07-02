@@ -13,9 +13,9 @@
 #define emit_a(x) (*jit++ = (x)) // emit assembler instruction
 #define emit_i(x) ({*(uint64_t*)jit = (x); jit += 8;}) // emit immediate value
 
-void* allocate(size_t size) {
+void* jitalloc() {
     #ifdef _WIN32
-    void* mem = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    void* mem = VirtualAlloc(NULL, 4196, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!mem) { fprintf(stderr, "VirtualAlloc failed\n"); exit(1); }
 #else
     void* mem = mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -25,14 +25,13 @@ void* allocate(size_t size) {
 }
 
 
-uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
+void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
     if (bt_start >= bt_end) {
         fprintf(stderr, "Invalid bytecode range: %zu to %zu\n", bt_start, bt_end);
-        return NULL;
+        exit(EXIT_FAILURE);
     }
 
-    uint8_t* jit = allocate(4096); // Allocate 4096 bytes for the compiled code
-    uint8_t* fun = jit; // Save the start of the allocated memory
+    uint8_t*  jit = fun; // Save the start of the allocated memory
     uint64_t* pc = ctx->btcode + bt_start;
     uint64_t  ip = 0;
     uint64_t* end = ctx->btcode + bt_end;
@@ -41,12 +40,17 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
     // RSI 是栈顶sp，RDI 是基址bp
     for(ip = *pc; pc < end && ip != 0; ip = *pc) {
         pc++;
+        if(jit - fun >= 4096) {
+            fprintf(stderr, "JIT compilation buffer overflow\n");
+            exit(1);
+        }
+        printf("PC in %llu\n", pc - ctx->btcode - 1);
         switch (ip) {
             case OP_FUNC:
                 emit_a(0x48); emit_a(0x89); emit_a(0xCF); // mov RDI, RCX; RDI 是基址bp
                 emit_a(0x48); emit_a(0x89); emit_a(0xFE); // mov RSI, RDI; RSI 是栈顶sp
                 emit_a(0x48); emit_a(0x8D); emit_a(0x34); emit_a(0xD6); // lea RSI, [RSI + RDX * 8]; RDX 是参数个数
-                emit_a(0x48); emit_a(0xB8); emit_i(0);    // mov RAX, 0x00; RAX 是返回值
+                emit_a(0x48); emit_a(0xB8); emit_i(0);    // mov RAX, 0x00; RAX 常用寄存器
                 break;
             case OP_G_GLO:
                 emit_a(0x48); emit_a(0xB8); emit_i(&(ctx->sym[*pc].val)); // mov RAX, global address
@@ -116,9 +120,10 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x8B); emit_a(0x41); emit_a(0xF8); // mov RAX, [RCX-8]
                 emit_a(0x4C); emit_a(0x89); emit_a(0xD2); // mov RDX, R10
                 emit_a(0xFF); emit_a(0xD0); // call RAX
-                emit_a(0x48); emit_a(0x8D); emit_a(0x71); emit_a(0xF8); // lea RSI, [RCX-8]
                 emit_a(0x5E); // pop RSI // 恢复栈顶sp
                 emit_a(0x5F); // pop RDI // 恢复基址bp
+                emit_a(0x48); emit_a(0xBB); emit_i((*pc + 1) * 8); // mov RBX, immediate value * 8 + 8
+                emit_a(0x48); emit_a(0x29); emit_a(0xF6); // sub RSI, RBX; 回退栈顶指针
                 emit_a(0x48); emit_a(0x83); emit_a(0xC4); emit_a(0x28); // add rsp, 40
                 pc++;
                 break;
@@ -130,5 +135,4 @@ uint8_t* compile(context_t ctx, size_t bt_start, size_t bt_end) {
                 exit(1);
         }
     }
-    return fun; // Return the allocated memory pointer
 }
