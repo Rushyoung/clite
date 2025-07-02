@@ -150,11 +150,11 @@ void run(context_t ctx){
                 break;
             case OP_GRT:
                 sp--;
-                ax = (*sp > ax);
+                ax = ((int64_t)*sp > (int64_t)ax);
                 break;
             case OP_LES:
                 sp--;
-                ax = (*sp < ax);
+                ax = ((int64_t)*sp < (int64_t)ax);
                 break;
             case OP_SHL:
                 sp--;
