@@ -54,12 +54,13 @@ int main(int argc, char *argv[]){
     scanner sc = InitScanner(file_size, file_code);
     parse(ctx, sc);
     if(__args__.symboltable){
-        DumpSymbolTable(ctx);
+        DumpSymbol(ctx);
     }
     if(__args__.bytecode){
         DumpBtcode(ctx);
     }
-
-    run(ctx);
+    if(!__args__.compile_only){
+        run(ctx);
+    }
     return 0;
 }

@@ -8,6 +8,6 @@
 void DumpToken(context_t ctx, token_t tk);
 void DumpScanner(scanner scanner);
 void DumpBtcode(context_t ctx);
-void DumpSymbolTable(context_t ctx);
+void DumpSymbol(context_t ctx);
 
 #endif//__DEBUG_H__

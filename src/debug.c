@@ -160,7 +160,7 @@ void DumpBtcode(context_t ctx){
     }
 }
 
-void DumpSymbolTable(context_t ctx) { // Renamed from DumpSymtable to match previous suggestion
+void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous suggestion
     if (ctx == NULL || ctx->sym == NULL) {
         printf("Symbol table is NULL.\n");
         return;
