@@ -102,16 +102,21 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
                 emit_a(0x48); emit_a(0x0F); emit_a(0xAF); emit_a(0xC3); // imul RAX, RBX
                 break;
-            case OP_DIV: // RAX/RBX @bug: unused opcode and have bug
+            case OP_DIV:
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
                 emit_a(0x48); emit_a(0x89); emit_a(0xC3); // mov RBX, RAX
-                emit_a(0x48); emit_a(0x88); emit_a(0x06); // mov RAX, [RSI]
+                emit_a(0x48); emit_a(0x8B); emit_a(0x06); // mov RAX, [RSI]
                 emit_a(0x48); emit_a(0x99);  // cqo // 扩展 RAX 到 RDX:RAX
                 emit_a(0x48); emit_a(0xF7); emit_a(0xFB); // idiv RBX; 除法，结果在 RAX 中
                 break;
-            case OP_MOD: // RAX % RBX @bug: unused opcode and have bug
-                printf("OP_MOD is not implemented yet\n");
-                exit(1);
+            case OP_MOD:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x89); emit_a(0xC3); // mov RBX, RAX
+                emit_a(0x48); emit_a(0x8B); emit_a(0x06); // mov RAX, [RSI]
+                emit_a(0x48); emit_a(0x99);  // cqo // 扩展 RAX 到 RDX:RAX
+                emit_a(0x48); emit_a(0xF7); emit_a(0xFB); // idiv RBX; 除法，结果在 RAX 中
+                emit_a(0x48); emit_a(0x89); emit_a(0xD0); // mov RAX, RDX; 余数在 RDX 中
+                break;
             case OP_OR:
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
