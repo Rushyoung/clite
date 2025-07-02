@@ -161,14 +161,14 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
                 emit_a(0x48); emit_a(0x39); emit_a(0xD8);               // cmp RAX, RBX
-                emit_a(0x0F); emit_a(0x9F); emit_a(0xC0);               // setg AL; 如果 RAX > RBX, 设置 AL 为 1
+                emit_a(0x0F); emit_a(0x9C); emit_a(0xC0);               // setl AL; 如果 RBX > RAX, 设置 AL 为 1
                 emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL; 扩展 AL 到 RAX
                 break;
             case OP_LES:
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
                 emit_a(0x48); emit_a(0x39); emit_a(0xD8);               // cmp RAX, RBX
-                emit_a(0x0F); emit_a(0x9C); emit_a(0xC0);               // setl AL; 如果 RAX < RBX, 设置 AL 为 1
+                emit_a(0x0F); emit_a(0x9F); emit_a(0xC0);               // setg AL; 如果 RBX < RAX, 设置 AL 为 1
                 emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL; 扩展 AL 到 RAX
                 break;
             case OP_SHL: // @bug: 使用 CL 寄存器作为移位量
