@@ -109,6 +109,58 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x99);  // cqo // 扩展 RAX 到 RDX:RAX
                 emit_a(0x48); emit_a(0xF7); emit_a(0xFB); // idiv RBX; 除法，结果在 RAX 中
                 break;
+            case OP_MOD: // RAX % RBX @bug: unused opcode and have bug
+                printf("OP_MOD is not implemented yet\n");
+                exit(1);
+            case OP_OR:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x09); emit_a(0xC3);               // or RAX, RBX
+                break;
+            case OP_XOR:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x31); emit_a(0xC3);               // xor RAX, RBX
+                break;
+            case OP_AND:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x21); emit_a(0xC3);               // and RAX, RBX
+                break;
+            case OP_EQU:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x39); emit_a(0xD8);               // cmp RAX, RBX
+                emit_a(0x0F); emit_a(0x94); emit_a(0xC0);               // sete AL; 如果相等, 设置 AL 为 1
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0); // movzx RAX, AL; 扩展 AL 到 RAX
+                break;
+            case OP_GRT:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x39); emit_a(0xD8);               // cmp RAX, RBX
+                emit_a(0x0F); emit_a(0x9F); emit_a(0xC0);               // setg AL; 如果 RAX > RBX, 设置 AL 为 1
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL; 扩展 AL 到 RAX
+                break;
+            case OP_LES:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0x39); emit_a(0xD8);               // cmp RAX, RBX
+                emit_a(0x0F); emit_a(0x9C); emit_a(0xC0);               // setl AL; 如果 RAX < RBX, 设置 AL 为 1
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL; 扩展 AL 到 RAX
+                break;
+            case OP_SHL: // @bug: 使用 CL 寄存器作为移位量
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0xD3); emit_a(0xE0);               // shl RAX, CL; 使用 CL 寄存器作为移位量
+                break;
+            case OP_SHR: // @bug: 使用 CL 寄存器作为移位量
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
+                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x48); emit_a(0xD3); emit_a(0xE8);               // shr RAX, CL; 使用 CL 寄存器作为移位量
+                break;
+            case OP_NOT: //RAX = !RAX, 逻辑非操作, @bug
+                emit_a(0x48); emit_a(0xF7); emit_a(0xD8);               // not RAX; 逻辑非操作
+                break;
             case OP_CALL:
                 emit_a(0x48); emit_a(0x89); emit_a(0xF3); // mov RBX, RSI
                 emit_a(0x48); emit_a(0x83); emit_a(0xEC); emit_a(0x28); // sub rsp, 40 // 对齐40字节栈空间
