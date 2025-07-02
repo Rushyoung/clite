@@ -18,17 +18,19 @@ But sadly, the project is not self-compiled. QAQ
 ## build the project
 The project is written in C.  
 So you can use any C compiler to build it, even the tinycc compiler.  
-And we also provide the `make.bat` and `make.sh` scripts to build the project.
+And we also provide the `make.bat` and `make.sh` scripts to build the project.  
+The `zeta` branch is the JIT version of the project, which is not finished yet and noly works on Windows.  
+Maybe I will support it to Linux in the future, but now I don't have time to do that.  
 ```shell
 sh ./make/make.sh
 # or
 ./make/make.bat
-# or
-./make/make-tcc.bat
 ```
 
 ## test the project
-Do not finish this step.
+```
+./make/make.bat test
+```
 
 
 ## basic variant type
@@ -39,6 +41,7 @@ Do not finish this step.
 | char | 字符     | 是    |
 | void | 无类型   | 是    |
 | enum | 全局匿名枚举 |
+| static | 静态函数，会进行jit编译 |
 
 
 
