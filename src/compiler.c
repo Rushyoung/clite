@@ -38,6 +38,7 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
         fprintf(stderr, "Invalid bytecode range: %zu to %zu\n", bt_start, bt_end);
         exit(EXIT_FAILURE);
     }
+    printf("Compiling bytecode from %zu to %zu\n", bt_start, bt_end);
     uint8_t*  jit = fun; // Save the start of the allocated memory
     uint64_t* pc = ctx->btcode + bt_start;
     uint64_t  ip = 0;
@@ -58,7 +59,7 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x89); emit_a(0xCF); // mov RDI, RCX; RDI 是基址bp
                 emit_a(0x48); emit_a(0x89); emit_a(0xFE); // mov RSI, RDI; RSI 是栈顶sp
                 emit_a(0x48); emit_a(0x8D); emit_a(0x34); emit_a(0xD6); // lea RSI, [RSI + RDX * 8]; RDX 是参数个数
-                emit_a(0x48); emit_a(0x31); emit_a(0xC0); // xor RAX, RAX; 清空 RAX 寄存器
+                //emit_a(0x48); emit_a(0x31); emit_a(0xC0); // xor RAX, RAX; 清空 RAX 寄存器
                 break;
             case OP_G_GLO:
                 emit_a(0x48); emit_a(0xB8); emit_i(&(ctx->sym[*pc].val)); // mov RAX, global address
@@ -174,11 +175,13 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
             case OP_SHL: // @bug: 使用 CL 寄存器作为移位量
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x88); emit_a(0xCB);                             // mov CL, BL; 将 AL 的值存入 CL 寄存器
                 emit_a(0x48); emit_a(0xD3); emit_a(0xE0);               // shl RAX, CL; 使用 CL 寄存器作为移位量
                 break;
             case OP_SHR: // @bug: 使用 CL 寄存器作为移位量
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
+                emit_a(0x88); emit_a(0xCB);                             // mov CL, BL; 将 RBX 的低 8 位移动到 CL
                 emit_a(0x48); emit_a(0xD3); emit_a(0xE8);               // shr RAX, CL; 使用 CL 寄存器作为移位量
                 break;
             case OP_NOT:
