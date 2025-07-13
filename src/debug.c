@@ -14,7 +14,10 @@ char* token_name[256] = {
     [TK_LOC] = "TK_LOC",
     [TK_ID] = "TK_ID",
     [TK_STR] = "TK_STR",
+    [TK_BREAK] = "TK_BREAK",
+    [TK_CONTINUE] = "TK_CONTINUE",
     [TK_CHAR] = "TK_CHAR",
+    [TK_DO] = "TK_DO",
     [TK_FOR] = "TK_FOR",
     [TK_ELSE] = "TK_ELSE",
     [TK_ENUM] = "TK_ENUM",
@@ -22,6 +25,7 @@ char* token_name[256] = {
     [TK_INT] = "TK_INT",
     [TK_RETURN] = "TK_RETURN",
     [TK_SIZEOF] = "TK_SIZEOF",
+    [TK_STATIC] = "TK_STATIC",
     [TK_WHILE] = "TK_WHILE",
     [TK_VOID] = "TK_VOID",
     [TK_ASSIGN] = "TK_ASSIGN",
@@ -88,7 +92,6 @@ char* op_name[64] = {
     [OP_DIV] = "OP_DIV",
     [OP_MOD] = "OP_MOD",
     [OP_NOT] = "OP_NOT",
-    [OP_NEGATE] = "OP_NEGATE",
     [OP_STR] = "OP_STR"
 };
 
@@ -157,7 +160,7 @@ void DumpBtcode(context_t ctx){
     }
 }
 
-void DumpSymbolTable(context_t ctx) { // Renamed from DumpSymtable to match previous suggestion
+void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous suggestion
     if (ctx == NULL || ctx->sym == NULL) {
         printf("Symbol table is NULL.\n");
         return;

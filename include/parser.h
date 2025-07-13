@@ -31,8 +31,10 @@ typedef struct{
     PrecLv  prec;
 } ParseRule;
 
-void BCG_compile(context_t ctx, scanner sc);    // bytecode generation
-void AOT_compile(context_t ctx, scanner sc);    // ahead-of-time compilation
-void JIT_compile(context_t ctx, scanner sc);    // just-in-time compilation
+void parse_expr(context_t ctx, scanner sc, PrecLv level);
+void parse_stmt(context_t ctx, scanner sc);
+void parse_global(context_t ctx, scanner sc);
+
+void parse(context_t ctx, scanner sc);
 
 #endif//__PARSER_H__

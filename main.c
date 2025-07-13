@@ -52,23 +52,15 @@ int main(int argc, char *argv[]){
 
     context_t ctx = InitContext();
     scanner sc = InitScanner(file_size, file_code);
-    BCG_compile(ctx, sc);
+    parse(ctx, sc);
     if(__args__.symboltable){
-        DumpSymbolTable(ctx);
+        DumpSymbol(ctx);
     }
     if(__args__.bytecode){
         DumpBtcode(ctx);
     }
-
-    if(__args__.savebtcode){
-        FILE* f = fopen("out.btcode", "wb");
-        if(!f){
-            perror("Failed to open output file");
-            exit(EXIT_FAILURE);
-        }
-        fwrite(ctx->btcode, sizeof(uint64_t), ctx->btcode_cur - ctx->btcode, f);
-        fclose(f);
+    if(!__args__.compile_only){
+        run(ctx);
     }
-    run(ctx);
     return 0;
 }

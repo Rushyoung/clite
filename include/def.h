@@ -42,7 +42,7 @@ struct _args_t{
     int debug;
     int bytecode;
     int symboltable;
-    int savebtcode;
+    int compile_only;
     char* inputs;
 };
 

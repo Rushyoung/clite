@@ -30,7 +30,7 @@ context_t InitContext(){
     ctx->btcode_cur = ctx->btcode;
 
     char* builtin = 
-    "break char continue do else enum for if int return sizeof while void "
+    "break char continue do else enum for if int return sizeof static while void "
     "main open read close printf input malloc "
     "free memset memcmp exit time sleep rand "
     "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX __VERSION__";
@@ -182,9 +182,20 @@ void InitArgs(int argc, char* argv[]){
     __args__.debug = 0;
     __args__.bytecode = 0;
     __args__.inputs = NULL;
-    __args__.symboltable = 0; // 初始化 symboltable 标志
+    __args__.symboltable = 0;
+    __args__.compile_only = 0;
 
     for(int i = 1; i < argc; i++){
+        if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-?") == 0){
+            printf("Usage: clite [options] <source_file>\n");
+            printf("Options:\n");
+            printf("  --debug, -d         Enable debug mode\n");
+            printf("  --bytecode, -b      show the bytecode\n");
+            printf("  --symboltable, -s   show the symbol table\n");
+            printf("  --compile, -c       Compile only, do not run\n");
+            printf("  --help, -h          Show this help message\n");
+            exit(EXIT_SUCCESS);
+        }
         if(strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0){
             __args__.debug = 1;
         } else if(strcmp(argv[i], "--bytecode") == 0 || strcmp(argv[i], "-b") == 0){
@@ -192,7 +203,7 @@ void InitArgs(int argc, char* argv[]){
         } else if(strcmp(argv[i], "--symboltable") == 0 || strcmp(argv[i], "-s") == 0){ // 添加 symboltable 选项
             __args__.symboltable = 1;
         } else if(strcmp(argv[i], "--compile") == 0 || strcmp(argv[i], "-c") == 0){
-            __args__.savebtcode = 1;
+            __args__.compile_only = 1;
         } else if(__args__.inputs == NULL){
             __args__.inputs = argv[i];
         } else {

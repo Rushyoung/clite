@@ -25,7 +25,5 @@ uint64_t lite_rand(NativeFunctionArgs);
 
 uint64_t buildin_list(NativeFunctionArgs);  // just use in bytecode
 
-int      is_native(uint64_t func);
-
 
 #endif//__NATIVE_H__

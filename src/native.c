@@ -55,8 +55,7 @@ uint64_t lite_close(NativeFunctionArgs) {
 uint64_t lite_printf(NativeFunctionArgs) {
     assert(arity >= 1, "lite_printf must have the format string as the first argument");
     assert(arity <= 6, "lite_printf supports up to 6 arguments");
-    printf(bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
-    return 0;
+    return printf(bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
 }
 
 
@@ -161,22 +160,4 @@ uint64_t buildin_list(NativeFunctionArgs) {
         list[i] = bp[i];
     }
     return (uint64_t)list; // return pointer to the list
-}
-
-
-int is_native(uint64_t func) {
-    return func == lite_close ||
-           func == lite_open ||
-           func == lite_read ||
-           func == lite_printf ||
-           func == lite_input ||
-           func == buildin_list ||
-           func == lite_malloc ||
-           func == lite_free ||
-           func == lite_memset ||
-           func == lite_memcmp ||
-           func == lite_time ||
-           func == lite_sleep ||
-           func == lite_rand ||
-           func == lite_exit;
 }

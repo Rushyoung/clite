@@ -32,7 +32,6 @@ typedef enum {
     OP_DIV,     // 除法
     OP_MOD,     // 取模
     OP_NOT,     // 逻辑非
-    OP_NEGATE,  // 逻辑负
     OP_STR,     // 转为字符串
 } OpCode;
 
