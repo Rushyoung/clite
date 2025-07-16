@@ -100,7 +100,6 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0xBB); emit_i(ctx->heap); // mov RBX, heap base address
                 emit_a(0x48); emit_a(0x03); emit_a(0xC3);      // add RAX, RBX; 将 RAX 的值加上堆基址
                 break;
-            case OP_SAD:
             case OP_PUSH:
                 emit_a(0x48); emit_a(0x89); emit_a(0x06);               // mov [RSI], RAX; 将 RAX 的值压栈
                 emit_a(0x48); emit_a(0x83); emit_a(0xC6); emit_a(0x08); // add RSI, 8; 栈顶指针加8

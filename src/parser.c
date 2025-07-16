@@ -400,7 +400,8 @@ static void expr_sizeof(ParseFunctionArgs) { // to fix bug
 
 // 解析函数调用表达式
 static void expr_call(ParseFunctionArgs) {
-    emit(ctx, OP_SAD);
+    emit(ctx, OP_PUSH);
+    emit(ctx, OP_PUSH); // 至少需要栈的两个位置
     int arg_count = 0;  // 函数参数计数
     if(!match(ctx, sc, TK_RI_PAREN)) { // 如果不是空参数列表
         do{
@@ -452,7 +453,7 @@ static void expr_list(ParseFunctionArgs) {
     }
     emit(ctx, OP_IMM);
     emit(ctx, (uint64_t)buildin_list); // 使用内置列表函数
-    emit(ctx, OP_SAD);
+    emit(ctx, OP_PUSH);
     int member_count = 0;
     do{
         member_count++;
@@ -805,7 +806,8 @@ void parse(context_t ctx, scanner sc) {
 
     emit(ctx, OP_IMM);
     emit(ctx, ctx->sym[ctx->main_id].val);
-    emit(ctx, OP_SAD);
+    emit(ctx, OP_PUSH);
+    emit(ctx, OP_PUSH);
     emit(ctx, OP_CALL); // 调用主函数
     emit(ctx, 0); // 主函数没有参数
     emit(ctx, OP_RET); // 程序结束指令

@@ -76,7 +76,6 @@ char* op_name[64] = {
     [OP_FUNC] = "OP_FUNC",
     [OP_LOOP] = "OP_LOOP",
     [OP_RET] = "OP_RET",
-    [OP_SAD] = "OP_SAD",
     [OP_PUSH] = "OP_PUSH",
     [OP_OR] = "OP_OR",
     [OP_XOR] = "OP_XOR",

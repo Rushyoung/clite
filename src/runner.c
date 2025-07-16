@@ -48,21 +48,14 @@ void run(context_t ctx){
                 ax = *pc;
                 pc++;
                 break;
-            case OP_SAD:
-                *sp = (uint64_t)(sp - stk); // 保存当前栈地址到栈顶
-                sp++;
-                *sp = (uint64_t)(bp - stk); // 保存当前基指针位置
-                sp++;
-                *sp = ax;
-                sp++;
-                break;
             case OP_LOOP: // 循环结束标记，什么都不做
             case OP_FUNC: // 函数入口标记，什么都不做
                 break;
             case OP_CALL:
-                bp = sp - *pc;
-                ax = *(bp - 1); // 获取函数地址
-                *(bp - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
+                ax = *(sp - *pc - 1);                               // 获取函数地址
+                *(sp - *pc - 2) = (uint64_t)(bp - stk);             // 保存基指针位置
+                *(sp - *pc - 1) = (uint64_t)(pc - ctx->btcode + 1); // 保存返回地址
+                bp = sp - *pc; // 更新基指针
                 if(ax < 65535 && *(ctx->btcode + ax) == OP_FUNC){
                     pc = ctx->btcode + ax + 1;
                     break;
@@ -76,7 +69,7 @@ void run(context_t ctx){
                     exit((uint8_t)ax);
                 }
                 pc = ctx->btcode + *(bp - 1); // 恢复返回地址
-                sp = bp - 3; // 恢复栈指针
+                sp = bp - 2; // 恢复栈指针
                 bp = stk + *(bp - 2); // 恢复基指针
                 break;
             case OP_JMP:
