@@ -467,7 +467,7 @@ static void expr_list(ParseFunctionArgs) {
 // 根据优先级解析表达式
 void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx);
-    ParseFn prefixFn = Rules[prev(sc).tk].prefix; 
+    ParseFn prefixFn = Rules[prev(sc).tk].prefix;
     if(prefixFn == NULL) {
         raise(sc->line, "Expected expression, but something else found");
     }
@@ -557,7 +557,7 @@ static void stmt_decl(ParseFunctionArgs) {
             emit(ctx, OP_IMM);
             emit(ctx, 0);
         }
-        emit(ctx, OP_PUSH); 
+        emit(ctx, OP_PUSH);
     }while(match(ctx, sc, TK_COMMA));
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after variable declaration"); // 确保以分号结尾
 }
@@ -592,7 +592,7 @@ static void stmt_dowhile(ParseFunctionArgs) {
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
     emit(ctx, OP_NOT);
-    emit(ctx, OP_JZ); 
+    emit(ctx, OP_JZ);
     emit(ctx, addr_start - ctx->btcode); // 如果条件非假，跳转到循环开始
     emit(ctx, OP_JMP);
     uint64_t* addr_end = blank(ctx); // 留白，跳转到循环结束
@@ -768,7 +768,7 @@ void parse_global(context_t ctx, scanner sc) {
         }
     } else {
         define_loop:
-        id->class = TK_GLO; 
+        id->class = TK_GLO;
         id->val = id - ctx->sym;
         if(match(ctx, sc, TK_ASSIGN)) {
             parse_expr(ctx, sc, PREC_ASSIGNMENT);

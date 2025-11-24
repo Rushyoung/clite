@@ -8,7 +8,7 @@ int main() {
         printf("%d ", arr[i]);
     }
     printf("\n");
-    
+
     // 冒泡排序
     for (i = 0; i < 4; i++) {         // 外层循环控制轮数
         for (int j = 0; j < 4 - i; j++) { // 内层循环比较相邻元素

@@ -29,7 +29,7 @@ context_t InitContext(){
     ctx->btcode = calloc(65536 * sizeof(uint64_t), 1);
     ctx->btcode_cur = ctx->btcode;
 
-    char* builtin = 
+    char* builtin =
     "break char continue do else enum for if int return sizeof static while void "
     "main open read close printf input malloc "
     "free memset memcmp exit time sleep rand "
@@ -56,7 +56,7 @@ context_t InitContext(){
         ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all system calls return int
         ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids];
     }
-    
+
     uint64_t constants[] = {
         EXIT_SUCCESS, EXIT_FAILURE, NULL, EOF, RAND_MAX, ctx->heap
     };
@@ -115,7 +115,7 @@ token_t* SymFind(context_t ctx, token_t tk){
         exit(EXIT_FAILURE);
     }
     for(int i = ctx->sym_idx - 1; i >= 0; i--){
-        if(ctx->sym[i].hash == tk.hash && 
+        if(ctx->sym[i].hash == tk.hash &&
            ctx->sym[i].len == tk.len &&
            strncmp(ctx->sym[i].name, tk.name, tk.len) == 0){
             return &ctx->sym[i];

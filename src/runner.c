@@ -16,7 +16,7 @@ void run(context_t ctx){
     uint64_t* sp = NULL;  // stack pointer
     uint64_t* pc = ctx->btcode; // program counter
     uint64_t  ip = 0;     // instruction pointer
-    uint64_t  ax = 0;     
+    uint64_t  ax = 0;
     stk = bp = sp = (uint64_t*)malloc(8192 * sizeof(uint64_t)); // allocate stack memory
     if(!stk){
         fprintf(stderr, "Failed to allocate memory for stack\n");

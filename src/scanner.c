@@ -40,7 +40,7 @@ static token_t advance(scanner sc, context_t ctx){
             }
             hash = (hash << 6) + (sc->cur - sc->pre);
             for(size_t i = 0; i < ctx->sym_idx; i++){
-                if(ctx->sym[i].hash == hash && 
+                if(ctx->sym[i].hash == hash &&
                 strncmp(ctx->sym[i].name, sc->pre, sc->cur - sc->pre) == 0){
                     return ctx->sym[i]; // return existing identifier token
                 }

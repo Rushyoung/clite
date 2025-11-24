@@ -187,7 +187,7 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
 
         // 打印 Class
         printf("%-9s | ", (s.class >= TK_NUM && s.class < 256 && token_name[s.class]) ? token_name[s.class] : (s.class == 0 ? "NO_CLASS" : "OTHER_CLS"));
-        
+
         // 打印 CType (type 字段) - 直接在此处处理
         int ctype_val = s.type;
         int base_type = ctype_val;
@@ -208,7 +208,7 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
             case TP_INT:  base_type_name = "int";  break;
             default:      base_type_name = "unk_base"; break;
         }
-        
+
         int written = snprintf(ctype_ptr, remaining_space, "%s", base_type_name);
         if (written > 0 && written < remaining_space) {
             ctype_ptr += written;
@@ -225,10 +225,10 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
         *ctype_ptr = '\0'; // 确保空终止
 
         printf("%-12s | ", ctype_str_buffer);
-        
+
         // 打印 Hash
         printf("0x%08X | ", s.hash);
-        
+
         // 打印 Val
         printf("%llu\n", s.val);
     }
