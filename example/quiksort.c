@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 // 交换数组中两个元素的值
 void swap(int* arr, int i, int j) {

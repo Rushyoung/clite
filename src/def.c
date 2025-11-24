@@ -53,7 +53,7 @@ context_t InitContext(){
     for(int ids = 0; ids < 13; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system calls
-        ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all system calls return int
+        ctx->sym[ctx->sym_idx - 1].type  = TYPE_INT; // all system calls return int
         ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids];
     }
 
@@ -63,7 +63,7 @@ context_t InitContext(){
     for(int ids = 0; ids < 6; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system constants
-        ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all constants are int
+        ctx->sym[ctx->sym_idx - 1].type  = TYPE_INT; // all constants are int
         ctx->sym[ctx->sym_idx - 1].val   = constants[ids];
     }
 

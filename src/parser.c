@@ -121,16 +121,16 @@ static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
 // 解析类型声明 (int, char, void)
 static int __ctype(context_t ctx, scanner sc) {
     token_t tk = prst(sc);
-    int type = TP_INT; // 默认类型为整型
+    int type = TYPE_INT; // 默认类型为整型
     switch(tk.tk) {
         case TK_INT:
-            type = TP_INT;
+            type = TYPE_INT;
             break;
         case TK_CHAR:
-            type = TP_CHAR;
+            type = TYPE_CHAR;
             break;
         case TK_VOID:
-            type = TP_VOID;
+            type = TYPE_VOID;
             break;
         default:
             raise(sc->line, "Expected type declaration (int, char, void)");
@@ -142,7 +142,7 @@ static int __ctype(context_t ctx, scanner sc) {
 // 解析标识符，并处理指针类型
 static token_t* __identifier(context_t ctx, scanner sc, int* type) {
     while(match(ctx, sc, TK_MUL)) {
-        *type += TP_PTR; // 处理指针类型
+        *type += TYPE_PTR; // 处理指针类型
     }
     expect(ctx, sc, TK_ID, "Expected identifier after type declaration");
     return SymFind(ctx, prev(sc));
@@ -385,15 +385,15 @@ static void expr_sizeof(ParseFunctionArgs) { // to fix bug
         if(id->class == TK_FUN){
             emit(ctx, 8);
         } else {
-            emit(ctx, (id->type == TP_VOID || id->type == TP_CHAR) ? 1 : 8); // 函数或指针类型为 8 字节，其他类型为 1 字节
+            emit(ctx, (id->type == TYPE_VOID || id->type == TYPE_CHAR) ? 1 : 8); // 函数或指针类型为 8 字节，其他类型为 1 字节
         }
     } else {
         expect(ctx, sc, TK_INT, "Expected type after 'sizeof'");
         int type = __ctype(ctx, sc); // 解析类型
-        if(type == TP_VOID) {
+        if(type == TYPE_VOID) {
             raise(sc->line, "Cannot use sizeof on void type");
         }
-        emit(ctx, (type == TP_CHAR || type == TP_VOID) ? 1 : 8); // char 和 void 类型为 1 字节，其他类型为 8 字节
+        emit(ctx, (type == TYPE_CHAR || type == TYPE_VOID) ? 1 : 8); // char 和 void 类型为 1 字节，其他类型为 8 字节
     }
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'sizeof' expression");
 }
@@ -529,11 +529,11 @@ static void stmt_decl(ParseFunctionArgs) {
     int base_type = 0;
     token_t type = prev(sc); // 获取当前类型声明
     if(type.tk == TK_INT) {
-        base_type = TP_INT; // 整型
+        base_type = TYPE_INT; // 整型
     } else if(type.tk == TK_CHAR) {
-        base_type = TP_CHAR; // 字符型
+        base_type = TYPE_CHAR; // 字符型
     } else if(type.tk == TK_VOID) {
-        base_type = TP_VOID; // 空类型
+        base_type = TYPE_VOID; // 空类型
     } else {
         raise(sc->line, "Expected type declaration (int, char, void)");
     }
@@ -545,7 +545,7 @@ static void stmt_decl(ParseFunctionArgs) {
         } else if(id->class == TK_GLO || id->class == TK_FUN || id->class == TK_SYS) {
             id = SymAdd(ctx, *id); // 如果是全局变量或函数，则添加到符号表
         }
-        if(real_type == TP_VOID) {
+        if(real_type == TYPE_VOID) {
             raise(sc->line, "Variable '%.*s' cannot be of type void", id->len, id->name);
         }
         id->type = real_type;
@@ -698,7 +698,7 @@ void parse_enum(context_t ctx, scanner sc){
             raise(sc->line, "Enum member '%.*s' already defined", id->len, id->name);
         }
         id->class = TK_SYS;
-        id->type = TP_INT;
+        id->type = TYPE_INT;
         if(match(ctx, sc, TK_ASSIGN)) {
             expect(ctx, sc, TK_NUM, "Expected number after '=' in enum declaration");
             enum_value = prev(sc).val;
@@ -720,8 +720,8 @@ void parse_global(context_t ctx, scanner sc) {
         return;
     }
     int in_static = match(ctx, sc, TK_STATIC); // 检查是否为静态变量，仅对函数生效。将函数jit编译为静态函数
-    int base_type = TP_INT; // 基本类型，默认为整型
-    int real_type = TP_INT; // 实际类型，默认为整型
+    int base_type = TYPE_INT; // 基本类型，默认为整型
+    int real_type = TYPE_INT; // 实际类型，默认为整型
     real_type = base_type = __ctype(ctx, sc); // 解析类型声明
     token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
     if(id->class == TK_GLO || id->class == TK_FUN) {

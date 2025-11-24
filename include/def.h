@@ -17,6 +17,7 @@ struct _context_t{
     uint64_t*   btcode_cur; // current position in bytecode
 
     int loop_depth; // current loop depth, used for break/continue statements
+    int expr_type;  // current expression type, used for type checking and change
 };
 
 typedef struct _context_t* context_t;
@@ -28,6 +29,8 @@ void      emit(context_t ctx, uint64_t op);
 uint64_t* blank(context_t ctx);                              // 留白
 void      patch(context_t ctx, uint64_t* addr, uint64_t op); // 填充留白
 
+// 填充循环中的break/continue跳转地址
+void      patch_loop_jumps(context_t ctx, uint64_t* addr_start, uint64_t* addr_end);
 
 token_t*  SymFind(context_t ctx, token_t tk);
 token_t*  SymAdd(context_t ctx, token_t tk);
@@ -36,7 +39,6 @@ void      SymEndloc(context_t ctx);
 
 void      SymStartLoop(context_t ctx);
 void      SymEndLoop(context_t ctx);
-int       SymLoopDepth(context_t ctx);
 
 struct _args_t{
     int debug;
