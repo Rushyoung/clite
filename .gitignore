@@ -2,6 +2,7 @@
 
 build
 test
+test*
 
 c4.c
 hello.c

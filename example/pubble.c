@@ -2,9 +2,9 @@
 
 int main() {
     int* arr = {64, 34, 25, 12, 22};  // 待排序数组
-    
+    int i;
     // 打印原始数组
-    for (int i = 0; i < 5; i++) {
+    for (i = 0; i < 5; i++) {
         printf("%d ", arr[i]);
     }
     printf("\n");
@@ -19,12 +19,12 @@ int main() {
             }
         }
     }
-    
+
     // 打印排序后数组
     for (i = 0; i < 5; i++) {
         printf("%d ", arr[i]);
     }
     printf("\n");
-    
+
     return 0;
 }
