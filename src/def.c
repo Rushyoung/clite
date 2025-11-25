@@ -31,15 +31,17 @@ context_t InitContext(){
 
     char* builtin =
     "break char continue do else enum for if int return sizeof static while void "
-    "main open read close printf input malloc "
+    "float double main open read close printf input malloc "
     "free memset memcmp exit time sleep rand "
     "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX __VERSION__";
     scanner keyword = InitScanner(strlen(builtin), builtin);
 
-    for(int ids = TK_BREAK; ids <= TK_VOID; ids++){
+    for(int ids = TK_BREAK; ids <= TK_FLOAT; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].tk = ids;
     }
+    next(keyword, ctx);
+    ctx->sym[ctx->sym_idx - 1].tk = TK_FLOAT; // double is as same as float type identifier
 
     next(keyword, ctx);
     ctx->sym[ctx->sym_idx - 1].tk = TK_ID;    // main function identifier
@@ -52,9 +54,9 @@ context_t InitContext(){
     };
     for(int ids = 0; ids < 13; ids++){
         next(keyword, ctx);
-        ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system calls
-        ctx->sym[ctx->sym_idx - 1].type  = TYPE_INT; // all system calls return int
-        ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids];
+        ctx->sym[ctx->sym_idx - 1].klass    = TK_SYS; // system calls
+        ctx->sym[ctx->sym_idx - 1].type     = TYPE_INT; // all system calls return int
+        ctx->sym[ctx->sym_idx - 1].val.pval = native_functions[ids];
     }
 
     uint64_t constants[] = {
@@ -62,9 +64,9 @@ context_t InitContext(){
     };
     for(int ids = 0; ids < 6; ids++){
         next(keyword, ctx);
-        ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system constants
-        ctx->sym[ctx->sym_idx - 1].type  = TYPE_INT; // all constants are int
-        ctx->sym[ctx->sym_idx - 1].val   = constants[ids];
+        ctx->sym[ctx->sym_idx - 1].klass    = TK_SYS; // system constants
+        ctx->sym[ctx->sym_idx - 1].type     = TYPE_INT; // all constants are int
+        ctx->sym[ctx->sym_idx - 1].val.uval = constants[ids];
     }
 
     free(keyword);
@@ -108,6 +110,20 @@ void patch(context_t ctx, uint64_t* addr, uint64_t op){
     *addr = op;
 }
 
+void patch_loop_jumps(context_t ctx, uint64_t* addr_start, uint64_t* addr_end){
+    uint64_t offset_start = addr_start - ctx->btcode;
+    uint64_t offset_end   = addr_end - ctx->btcode;
+    for(uint64_t* addr = addr_start; addr < addr_end; addr++){
+        if(*addr == OP_JEND){
+            *addr = OP_JMP;
+            *(addr + 1) += *(addr + 1) == 0 ? offset_end : offset_start;
+        }
+        if(OP_G_GLO <= *addr && *addr <= OP_CALL){
+            addr++;
+        }
+    }
+}
+
 
 token_t* SymFind(context_t ctx, token_t tk){
     if(tk.tk != TK_ID){
@@ -135,8 +151,8 @@ token_t* SymAdd(context_t ctx, token_t tk){
         exit(EXIT_FAILURE);
     }
     ctx->sym[ctx->sym_idx] = tk;
-    ctx->sym[ctx->sym_idx].class = 0; // default class is 0
-    ctx->sym[ctx->sym_idx].val = 0;   // default value is 0
+    ctx->sym[ctx->sym_idx].klass    = 0;    // default class is 0
+    ctx->sym[ctx->sym_idx].val.uval = 0;    // default value is 0
     ctx->sym_idx++;
     return &ctx->sym[ctx->sym_idx - 1];
 }
