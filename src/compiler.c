@@ -26,7 +26,7 @@ void* jitalloc() {
     void* mem = VirtualAlloc(NULL, 4196, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!mem) { fprintf(stderr, "VirtualAlloc failed\n"); exit(1); }
 #else
-    void* mem = mmap(NULL, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* mem = mmap(NULL, 4196, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mem == MAP_FAILED) { perror("mmap"); exit(1); }
 #endif
     return mem;
@@ -90,17 +90,10 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x0F); emit_a(0x84); emit_v(*pc);  // jz RBX; 如果 RAX 为 0，则跳转到 RBX
                 pc++;
                 break;
-            case OP_LOOP:
-                break; // OP_LOOP 仅用于标记循环结束位置
             case OP_IMM:
                 emit_a(0x48); emit_a(0xB8); emit_i(*pc); // mov RAX, immediate value
                 pc++;
                 break;
-            case OP_STR:
-                emit_a(0x48); emit_a(0xBB); emit_i(ctx->heap); // mov RBX, heap base address
-                emit_a(0x48); emit_a(0x03); emit_a(0xC3);      // add RAX, RBX; 将 RAX 的值加上堆基址
-                break;
-            case OP_SAD:
             case OP_PUSH:
                 emit_a(0x48); emit_a(0x89); emit_a(0x06);               // mov [RSI], RAX; 将 RAX 的值压栈
                 emit_a(0x48); emit_a(0x83); emit_a(0xC6); emit_a(0x08); // add RSI, 8; 栈顶指针加8
