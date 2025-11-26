@@ -106,7 +106,7 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
 
         // 打印 Name 和 Len
         if (s.name != NULL && s.len > 0) {
-            snprintf(name_display_buffer, sizeof(name_display_buffer), "%.*s (%zu)", (int)s.len, s.name, s.len);
+            snprintf(name_display_buffer, sizeof(name_display_buffer), "%.*s (%d)", s.len, s.name, s.len);
         } else {
             snprintf(name_display_buffer, sizeof(name_display_buffer), "-");
         }
@@ -152,7 +152,7 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
         }
         *ctype_ptr = '\0'; // 确保空终止
 
-        printf("%-12s | 0x%08X | %llu\n", ctype_str_buffer, s.hash, s.val);
+        printf("%-12s | 0x%08X | %llu\n", ctype_str_buffer, s.hash, s.val.uval);
     }
     printf("--- End of Symbol Table Dump ---\n");
 }

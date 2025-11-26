@@ -1,5 +1,6 @@
 #include "native.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -132,12 +133,7 @@ uint64_t lite_sleep(NativeFunctionArgs) {
         fprintf(stderr, "lite_sleep requires non-negative argument\n");
         exit(EXIT_FAILURE);
     }
-#ifdef _WIN32
-    _sleep(seconds * 1000); // Windows uses milliseconds
-#else
     sleep(seconds);
-#endif
-    return 0;
 }
 
 
@@ -147,6 +143,13 @@ uint64_t lite_rand(NativeFunctionArgs) {
         exit(EXIT_FAILURE);
     }
     return (uint64_t)(rand());
+}
+
+
+uint64_t lite_debug_sp(NativeFunctionArgs) {
+    assert(arity == 0, "lite_debug_sp requires 0 arguments");
+    fprintf(stderr, "Debug: Stack Pointer = %p\n", bp);
+    return 0;
 }
 
 

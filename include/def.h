@@ -29,7 +29,6 @@ void      emit(context_t ctx, uint64_t op);
 uint64_t* blank(context_t ctx);                              // 留白
 void      patch(context_t ctx, uint64_t* addr, uint64_t op); // 填充留白
 
-// 填充循环中的break/continue跳转地址
 void      patch_loop_jumps(context_t ctx, uint64_t* addr_start, uint64_t* addr_end);
 
 token_t*  SymFind(context_t ctx, token_t tk);

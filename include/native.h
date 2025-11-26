@@ -23,6 +23,8 @@ uint64_t lite_time(NativeFunctionArgs);
 uint64_t lite_sleep(NativeFunctionArgs);
 uint64_t lite_rand(NativeFunctionArgs);
 
+uint64_t lite_debug_sp(NativeFunctionArgs);
+
 uint64_t buildin_list(NativeFunctionArgs);  // just use in bytecode
 
 

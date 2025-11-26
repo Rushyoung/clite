@@ -632,12 +632,14 @@ static void stmt_dowhile(ParseFunctionArgs) {
 // 解析 for 循环语句
 static void stmt_for(ParseFunctionArgs) {
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'for'");
+    size_t old_sym_idx = ctx->sym_idx;
     if(match(ctx, sc, TK_SEMICOLON)) {
     } else if(match_type(ctx, sc)) {
         stmt_decl(ctx, sc, 1); // 解析 for 循环的初始化部分
     } else {
         stmt_expr(ctx, sc, 1); // 解析 for 循环的初始化表达式
     }
+    int vars_declared = ctx->sym_idx - old_sym_idx;
     uint64_t* addr_start = ctx->btcode_cur;
     uint64_t* addr_end = NULL;
     if(!match(ctx, sc, TK_SEMICOLON)) {
@@ -662,10 +664,15 @@ static void stmt_for(ParseFunctionArgs) {
     SymEndLoop(ctx);
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode); // 跳转到循环开始
+    uint64_t* exit_addr = ctx->btcode_cur;
     if(addr_end) {
-        patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
+        patch(ctx, addr_end, exit_addr - ctx->btcode);
     }
-    patch_loop_jumps(ctx, addr_start, ctx->btcode_cur);
+    for(int i = 0; i < vars_declared; i++) {
+        emit(ctx, OP_POP);
+    }
+    patch_loop_jumps(ctx, addr_start, exit_addr);
+    ctx->sym_idx = old_sym_idx;
 }
 
 // 解析 if 语句

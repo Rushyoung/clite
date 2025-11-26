@@ -32,7 +32,7 @@ context_t InitContext(){
     char* builtin =
     "break char continue do else enum for if int return sizeof static while void "
     "float double main open read close printf input malloc "
-    "free memset memcmp exit time sleep rand "
+    "free memset memcmp exit time sleep rand __builtin_sp "
     "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX __VERSION__";
     scanner keyword = InitScanner(strlen(builtin), builtin);
 
@@ -50,9 +50,10 @@ context_t InitContext(){
     NativeFn native_functions[] = {
         lite_open, lite_read, lite_close, lite_printf, lite_input,
         lite_malloc, lite_free, lite_memset, lite_memcmp, lite_exit,
-        lite_time, lite_sleep, lite_rand
+        lite_time, lite_sleep, lite_rand, lite_debug_sp
     };
-    for(int ids = 0; ids < 13; ids++){
+    int native_count = sizeof(native_functions) / sizeof(NativeFn);
+    for(int ids = 0; ids < native_count; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].klass    = TK_SYS; // system calls
         ctx->sym[ctx->sym_idx - 1].type     = TYPE_INT; // all system calls return int
@@ -116,7 +117,7 @@ void patch_loop_jumps(context_t ctx, uint64_t* addr_start, uint64_t* addr_end){
     for(uint64_t* addr = addr_start; addr < addr_end; addr++){
         if(*addr == OP_JEND){
             *addr = OP_JMP;
-            *(addr + 1) += *(addr + 1) == 0 ? offset_end : offset_start;
+            *(addr + 1) = *(addr + 1) == 0 ? offset_end : offset_start;
         }
         if(OP_G_GLO <= *addr && *addr <= OP_CALL){
             addr++;
