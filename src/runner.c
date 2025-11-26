@@ -25,7 +25,7 @@ void run(context_t ctx){
     for(ip = *pc; ip != 0; ip = *pc){
         pc++;
         if(__args__.debug){
-            printf("%3llu OP=%2llu, sp = %2lld, ax = %lld\n", pc - ctx->btcode - 1, ip, sp - stk, ax);
+            printf("%3llu OP=%2llu, sp = %2lld, ax = %lld\n", pc - ctx->btcode - 1, ip, sp - stk, ax.uval);
         }
         switch(ip){
             case OP_G_GLO:
