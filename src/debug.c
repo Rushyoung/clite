@@ -6,111 +6,39 @@
 #include "opcode.h"
 #include "token.h"
 
+#define TOKEN(name, desc) [name] = #name,
 char* token_name[256] = {
-    [TK_NUM] = "TK_NUM",
-    [TK_FUN] = "TK_FUN",
-    [TK_SYS] = "TK_SYS",
-    [TK_GLO] = "TK_GLO",
-    [TK_LOC] = "TK_LOC",
-    [TK_ID] = "TK_ID",
-    [TK_STR] = "TK_STR",
-    [TK_BREAK] = "TK_BREAK",
-    [TK_CONTINUE] = "TK_CONTINUE",
-    [TK_CHAR] = "TK_CHAR",
-    [TK_DO] = "TK_DO",
-    [TK_FOR] = "TK_FOR",
-    [TK_ELSE] = "TK_ELSE",
-    [TK_ENUM] = "TK_ENUM",
-    [TK_IF] = "TK_IF",
-    [TK_INT] = "TK_INT",
-    [TK_RETURN] = "TK_RETURN",
-    [TK_SIZEOF] = "TK_SIZEOF",
-    [TK_STATIC] = "TK_STATIC",
-    [TK_WHILE] = "TK_WHILE",
-    [TK_VOID] = "TK_VOID",
-    [TK_ASSIGN] = "TK_ASSIGN",
-    [TK_COND] = "TK_COND",
-    [TK_LOR] = "TK_LOR",
-    [TK_LAN] = "TK_LAN",
-    [TK_NOT] = "TK_NOT",
-    [TK_OR] = "TK_OR",
-    [TK_XOR] = "TK_XOR",
-    [TK_AND] = "TK_AND",
-    [TK_EQ] = "TK_EQ",
-    [TK_NE] = "TK_NE",
-    [TK_LT] = "TK_LT",
-    [TK_GT] = "TK_GT",
-    [TK_LE] = "TK_LE",
-    [TK_GE] = "TK_GE",
-    [TK_SHL] = "TK_SHL",
-    [TK_SHR] = "TK_SHR",
-    [TK_ADD] = "TK_ADD",
-    [TK_SUB] = "TK_SUB",
-    [TK_MUL] = "TK_MUL",
-    [TK_DIV] = "TK_DIV",
-    [TK_MOD] = "TK_MOD",
-    [TK_INC] = "TK_INC",
-    [TK_DEC] = "TK_DEC",
-    [TK_LE_PAREN] = "TK_LE_PAREN",
-    [TK_RI_PAREN] = "TK_RI_PAREN",
-    [TK_LE_BRACE] = "TK_LE_BRACE",
-    [TK_RI_BRACE] = "TK_RI_BRACE",
-    [TK_LE_BRCKT] = "TK_LE_BRCKT",
-    [TK_RI_BRCKT] = "TK_RI_BRCKT",
-    [TK_COMMA] = "TK_COMMA",
-    [TK_SEMICOLON] = "TK_SEMICOLON",
-    [TK_COLON] = "TK_COLON",
+    #include "token.def"
 };
+#undef TOKEN
+
+#define OPCODE(name, desc) [name] = #name,
 char* op_name[64] = {
-    [OP_G_GLO] = "OP_G_GLO",
-    [OP_S_GLO] = "OP_S_GLO",
-    [OP_G_LOC] = "OP_G_LOC",
-    [OP_S_LOC] = "OP_S_LOC",
-    [OP_IMM] = "OP_IMM",
-    [OP_JMP] = "OP_JMP",
-    [OP_JZ] = "OP_JZ",
-    [OP_JEND] = "OP_JEND",
-    [OP_CALL] = "OP_CALL",
-    [OP_G_OFF] = "OP_G_OFF",
-    [OP_S_OFF] = "OP_S_OFF",
-    [OP_FUNC] = "OP_FUNC",
-    [OP_LOOP] = "OP_LOOP",
-    [OP_RET] = "OP_RET",
-    [OP_PUSH] = "OP_PUSH",
-    [OP_OR] = "OP_OR",
-    [OP_XOR] = "OP_XOR",
-    [OP_AND] = "OP_AND",
-    [OP_EQU] = "OP_EQU",
-    [OP_LES] = "OP_LES",
-    [OP_GRT] = "OP_GRT",
-    [OP_SHL] = "OP_SHL",
-    [OP_SHR] = "OP_SHR",
-    [OP_ADD] = "OP_ADD",
-    [OP_SUB] = "OP_SUB",
-    [OP_MUL] = "OP_MUL",
-    [OP_DIV] = "OP_DIV",
-    [OP_MOD] = "OP_MOD",
-    [OP_NOT] = "OP_NOT",
-    [OP_STR] = "OP_STR"
+    #include "opcode.def"
 };
+#undef OPCODE
 
 
 void DumpToken(context_t ctx, token_t tk) {
-    printf("Token: %03d ", tk.tk);
+    printf("Token(%03d): ", tk.tk);
     if(tk.tk < 256 && tk.tk >= 128) {
-        printf("%9s | ", token_name[tk.tk]);
+        printf("%12s | ", token_name[tk.tk]);
     } else {
-        printf("%9c | ", (char)tk.tk);
+        printf("%12c | ", (char)tk.tk);
     }
     switch(tk.tk) {
         case TK_NUM:
-            printf("value: %lld", tk.val);
+            if(tk.type == TYPE_INT){
+                printf("int value: %llu", tk.val.uval);
+            } else if(tk.type == TYPE_FLOAT) {
+                printf("flt value: %lf", tk.val.fval);
+            }
             break;
         case TK_ID:
             printf("len: %d, value: %.*s", tk.len, tk.len, tk.name);
             break;
         case TK_STR:
-            printf("len: %d, value: \"%.*s\"", tk.len, tk.len, ctx->heap + tk.val);
+            printf("len: %d, value: \"%.*s\"", tk.len, tk.len, ctx->heap + tk.val.uval);
             break;
     }
     printf("\n");
@@ -185,8 +113,8 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
         printf("%-20s | ", name_display_buffer);
 
         // 打印 Class
-        printf("%-9s | ", (s.class >= TK_NUM && s.class < 256 && token_name[s.class]) ? token_name[s.class] : (s.class == 0 ? "NO_CLASS" : "OTHER_CLS"));
-        
+        printf("%-9s | ", (s.klass >= TK_NUM && s.klass < 256 && token_name[s.klass]) ? token_name[s.klass] : (s.klass == 0 ? "NO_CLASS" : "OTHER_CLS"));
+
         // 打印 CType (type 字段) - 直接在此处处理
         int ctype_val = s.type;
         int base_type = ctype_val;
@@ -195,19 +123,20 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
         char* ctype_ptr = ctype_str_buffer;
         int remaining_space = sizeof(ctype_str_buffer);
 
-        while (base_type >= TP_PTR) {
-            base_type -= TP_PTR;
+        while (base_type >= TYPE_PTR) {
+            base_type -= TYPE_PTR;
             ptr_level++;
         }
 
         const char* base_type_name;
         switch (base_type) {
-            case TP_VOID: base_type_name = "void"; break;
-            case TP_CHAR: base_type_name = "char"; break;
-            case TP_INT:  base_type_name = "int";  break;
-            default:      base_type_name = "unk_base"; break;
+            case TYPE_VOID:  base_type_name = "void";  break;
+            case TYPE_CHAR:  base_type_name = "char";  break;
+            case TYPE_INT:   base_type_name = "int";   break;
+            case TYPE_FLOAT: base_type_name = "float"; break;
+            default:      base_type_name = "undefined"; break;
         }
-        
+
         int written = snprintf(ctype_ptr, remaining_space, "%s", base_type_name);
         if (written > 0 && written < remaining_space) {
             ctype_ptr += written;
@@ -223,13 +152,7 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
         }
         *ctype_ptr = '\0'; // 确保空终止
 
-        printf("%-12s | ", ctype_str_buffer);
-        
-        // 打印 Hash
-        printf("0x%08X | ", s.hash);
-        
-        // 打印 Val
-        printf("%llu\n", s.val);
+        printf("%-12s | 0x%08X | %llu\n", ctype_str_buffer, s.hash, s.val);
     }
     printf("--- End of Symbol Table Dump ---\n");
 }

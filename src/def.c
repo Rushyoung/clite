@@ -29,17 +29,19 @@ context_t InitContext(){
     ctx->btcode = calloc(65536 * sizeof(uint64_t), 1);
     ctx->btcode_cur = ctx->btcode;
 
-    char* builtin = 
+    char* builtin =
     "break char continue do else enum for if int return sizeof static while void "
-    "main open read close printf input malloc "
+    "float double main open read close printf input malloc "
     "free memset memcmp exit time sleep rand "
     "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX __VERSION__";
     scanner keyword = InitScanner(strlen(builtin), builtin);
 
-    for(int ids = TK_BREAK; ids <= TK_VOID; ids++){
+    for(int ids = TK_BREAK; ids <= TK_FLOAT; ids++){
         next(keyword, ctx);
         ctx->sym[ctx->sym_idx - 1].tk = ids;
     }
+    next(keyword, ctx);
+    ctx->sym[ctx->sym_idx - 1].tk = TK_FLOAT; // double is as same as float type identifier
 
     next(keyword, ctx);
     ctx->sym[ctx->sym_idx - 1].tk = TK_ID;    // main function identifier
@@ -52,19 +54,19 @@ context_t InitContext(){
     };
     for(int ids = 0; ids < 13; ids++){
         next(keyword, ctx);
-        ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system calls
-        ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all system calls return int
-        ctx->sym[ctx->sym_idx - 1].val   = (uint64_t)native_functions[ids];
+        ctx->sym[ctx->sym_idx - 1].klass    = TK_SYS; // system calls
+        ctx->sym[ctx->sym_idx - 1].type     = TYPE_INT; // all system calls return int
+        ctx->sym[ctx->sym_idx - 1].val.pval = native_functions[ids];
     }
-    
+
     uint64_t constants[] = {
         EXIT_SUCCESS, EXIT_FAILURE, NULL, EOF, RAND_MAX, ctx->heap
     };
     for(int ids = 0; ids < 6; ids++){
         next(keyword, ctx);
-        ctx->sym[ctx->sym_idx - 1].class = TK_SYS; // system constants
-        ctx->sym[ctx->sym_idx - 1].type  = TP_INT; // all constants are int
-        ctx->sym[ctx->sym_idx - 1].val   = constants[ids];
+        ctx->sym[ctx->sym_idx - 1].klass    = TK_SYS; // system constants
+        ctx->sym[ctx->sym_idx - 1].type     = TYPE_INT; // all constants are int
+        ctx->sym[ctx->sym_idx - 1].val.uval = constants[ids];
     }
 
     free(keyword);
@@ -108,6 +110,20 @@ void patch(context_t ctx, uint64_t* addr, uint64_t op){
     *addr = op;
 }
 
+void patch_loop_jumps(context_t ctx, uint64_t* addr_start, uint64_t* addr_end){
+    uint64_t offset_start = addr_start - ctx->btcode;
+    uint64_t offset_end   = addr_end - ctx->btcode;
+    for(uint64_t* addr = addr_start; addr < addr_end; addr++){
+        if(*addr == OP_JEND){
+            *addr = OP_JMP;
+            *(addr + 1) += *(addr + 1) == 0 ? offset_end : offset_start;
+        }
+        if(OP_G_GLO <= *addr && *addr <= OP_CALL){
+            addr++;
+        }
+    }
+}
+
 
 token_t* SymFind(context_t ctx, token_t tk){
     if(tk.tk != TK_ID){
@@ -115,7 +131,7 @@ token_t* SymFind(context_t ctx, token_t tk){
         exit(EXIT_FAILURE);
     }
     for(int i = ctx->sym_idx - 1; i >= 0; i--){
-        if(ctx->sym[i].hash == tk.hash && 
+        if(ctx->sym[i].hash == tk.hash &&
            ctx->sym[i].len == tk.len &&
            strncmp(ctx->sym[i].name, tk.name, tk.len) == 0){
             return &ctx->sym[i];
@@ -135,8 +151,8 @@ token_t* SymAdd(context_t ctx, token_t tk){
         exit(EXIT_FAILURE);
     }
     ctx->sym[ctx->sym_idx] = tk;
-    ctx->sym[ctx->sym_idx].class = 0; // default class is 0
-    ctx->sym[ctx->sym_idx].val = 0;   // default value is 0
+    ctx->sym[ctx->sym_idx].klass    = 0;    // default class is 0
+    ctx->sym[ctx->sym_idx].val.uval = 0;    // default value is 0
     ctx->sym_idx++;
     return &ctx->sym[ctx->sym_idx - 1];
 }
@@ -189,11 +205,12 @@ void InitArgs(int argc, char* argv[]){
         if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-?") == 0){
             printf("Usage: clite [options] <source_file>\n");
             printf("Options:\n");
-            printf("  --debug, -d         Enable debug mode\n");
-            printf("  --bytecode, -b      show the bytecode\n");
-            printf("  --symboltable, -s   show the symbol table\n");
-            printf("  --compile, -c       Compile only, do not run\n");
-            printf("  --help, -h          Show this help message\n");
+            printf("  -b, --bytecode      Show the bytecode\n");
+            printf("  -c, --compile       Compile only, do not run\n");
+            printf("  -d, --debug         Enable debug mode\n");
+            printf("  -h, --help          Show this help message\n");
+            printf("  -t, --tokenization  Show the tokenization result\n");
+            printf("  -s, --symboltable   Show the symbol table\n");
             exit(EXIT_SUCCESS);
         }
         if(strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0){
@@ -204,6 +221,8 @@ void InitArgs(int argc, char* argv[]){
             __args__.symboltable = 1;
         } else if(strcmp(argv[i], "--compile") == 0 || strcmp(argv[i], "-c") == 0){
             __args__.compile_only = 1;
+        } else if(strcmp(argv[i], "--tokenization") == 0 || strcmp(argv[i], "-t") == 0){
+            __args__.tokenization = 1;
         } else if(__args__.inputs == NULL){
             __args__.inputs = argv[i];
         } else {

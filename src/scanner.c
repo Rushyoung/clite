@@ -6,6 +6,7 @@
 
 #include "def.h"
 #include "token.h"
+#include "opcode.h"
 
 
 static token_t advance(scanner sc, context_t ctx){
@@ -40,7 +41,7 @@ static token_t advance(scanner sc, context_t ctx){
             }
             hash = (hash << 6) + (sc->cur - sc->pre);
             for(size_t i = 0; i < ctx->sym_idx; i++){
-                if(ctx->sym[i].hash == hash && 
+                if(ctx->sym[i].hash == hash &&
                 strncmp(ctx->sym[i].name, sc->pre, sc->cur - sc->pre) == 0){
                     return ctx->sym[i]; // return existing identifier token
                 }
@@ -53,30 +54,77 @@ static token_t advance(scanner sc, context_t ctx){
             ctx->sym_idx++;
             return tk; // return identifier token
         }
-        case '0' ... '9':{
-            int val = *sc->pre - '0';
-            if(val){
-                while(*sc->cur >= '0' && *sc->cur <= '9'){
-                    val = val * 10 + *sc->cur - '0';
-                    sc->cur++;
-                }
-            } else if(*sc->cur == 'x' || *sc->cur == 'X'){
+        case '0':{
+            if(*sc->cur == 'x' || *sc->cur == 'X'){     // hexadecimal number
                 sc->cur++;
+                uint64_t val = 0;
                 while((*sc->cur >= '0' && *sc->cur <= '9') ||
                     (*sc->cur >= 'a' && *sc->cur <= 'f') ||
                     (*sc->cur >= 'A' && *sc->cur <= 'F')){
                     val = val * 16 + (*sc->cur & 15) + (*sc->cur >= 'A' ? 9 : 0);
                     sc->cur++;
                 }
-            } else {
+                tk.val.uval = val;
+                tk.tk = TK_NUM;
+                tk.type = TYPE_INT; // hexadecimal number
+                return tk; // return number token
+            }
+            if(*sc->cur == '.'){                 // floating point number
+                sc->cur++;
+                double val = 0.0;
+                double factor = 1.0;
+                while(*sc->cur >= '0' && *sc->cur <= '9'){
+                    val = val * 10 + (*sc->cur - '0');
+                    factor *= 10.0;
+                    sc->cur++;
+                }
+                double ans = val / factor;
+                tk.val.fval = ans;
+                tk.tk = TK_NUM;
+                tk.type = TYPE_FLOAT;
+                return tk;
+            }
+            if(*sc->cur >= '0' && *sc->cur <= '7') {
+                uint64_t val = 0;
                 while(*sc->cur >= '0' && *sc->cur <= '7'){
                     val = val * 8 + *sc->cur - '0';
                     sc->cur++;
                 }
+                tk.val.uval = val;
+                tk.tk = TK_NUM;
+                tk.type = TYPE_INT; // octal number
+                return tk; // return number token
             }
+            tk.val.uval = 0;
             tk.tk = TK_NUM;
-            tk.val = val;
+            tk.type = TYPE_INT;
             return tk; // return number token
+        }
+        case '1' ... '9':{
+            uint64_t int_val = *sc->pre - '0';
+            double flt_val = 0.0;
+            double factor = 1.0;
+            while(*sc->cur >= '0' && *sc->cur <= '9'){
+                int_val = int_val * 10 + (*sc->cur - '0');
+                sc->cur++;
+            }
+            if(*sc->cur == '.'){ // floating point number
+                sc->cur++;
+                while(*sc->cur >= '0' && *sc->cur <= '9'){
+                    flt_val = flt_val * 10 + (*sc->cur - '0');
+                    factor *= 10.0;
+                    sc->cur++;
+                }
+                double ans = flt_val / factor + int_val; // combine integer and fractional part
+                tk.val.fval = ans;
+                tk.tk = TK_NUM;
+                tk.type = TYPE_FLOAT; // floating point number
+                return tk;
+            }
+            tk.val.uval = int_val;
+            tk.tk = TK_NUM;
+            tk.type = TYPE_INT; // integer number
+            return tk;
         }
         case '/':
             if(*sc->cur == '/'){
@@ -98,7 +146,7 @@ static token_t advance(scanner sc, context_t ctx){
                 tk.tk = TK_STR;     // string token
                 tk.len = sc->cur - sc->pre - 2; // exclude the quotes
             } else {
-                tk.val = *tk.name; // character token
+                tk.val.uval = *tk.name; // character token
                 tk.tk = TK_NUM; // character token
             }
             return tk;

@@ -15,6 +15,15 @@ The subset likes the [C4](https://github.com/rswier/c4) project, but now is bigg
 This project is rewritten from `C4` in a more easy-to-read way, and the code is more modularized.  
 But sadly, the project is not self-compiled. QAQ  
 
+## what is the meaning of the branch name in clite
+branch | description
+--- | ---
+main | 由rushyoung创建，主分支，并未完成
+beta | 由WuJunkai2004创建，完成了基本的语法分析和语义分析，支持了大部分C语言的特性，支持基于字节码的虚拟机执行，是一个稳定的版本
+zeta | 由WuJunkai2004创建，支持从字节码转机器码的JIT编译，但目前只在Windows上运行，并只支持了部分字节码，且存在栈错误
+theta | 未创建，是一个计划中的分支，因为theta符号有时用于Big O符号的变体，故该分支计划用于优化
+iota | 由WuJunkai2004创建，计划在虚拟机和解析器上，支持数据类型（当前beta仅解析器支持）。
+
 ## build the project
 The project is written in C.  
 So you can use any C compiler to build it, even the tinycc compiler.  

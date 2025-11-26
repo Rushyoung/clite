@@ -48,6 +48,13 @@ static void stmt_dowhile(ParseFunctionArgs);
 static void stmt_break(ParseFunctionArgs);
 static void stmt_continue(ParseFunctionArgs);
 
+static void parse_expr(context_t ctx, scanner sc, PrecLv level);
+static void parse_stmt(context_t ctx, scanner sc);
+static void parse_global(context_t ctx, scanner sc);
+static void parse_enum(context_t ctx, scanner sc);
+static void parse_function(context_t ctx, scanner sc, token_t* name, int need_jit);
+static void parse_assign(context_t ctx, scanner sc, token_t* id);
+
 ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_NUM]       = {expr_number,     NULL,           PREC_NONE },
     [TK_FUN]       = {NULL,            NULL,           PREC_NONE },
@@ -56,6 +63,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_LOC]       = {NULL,            NULL,           PREC_NONE },
     [TK_ID]        = {expr_variable,   NULL,           PREC_NONE },
     [TK_STR]       = {expr_string,     NULL,           PREC_NONE },
+    [TK_BREAK]     = {NULL,            NULL,           PREC_NONE },
     [TK_CHAR]      = {NULL,            NULL,           PREC_NONE },
     [TK_ELSE]      = {NULL,            NULL,           PREC_NONE },
     [TK_ENUM]      = {NULL,            NULL,           PREC_NONE },
@@ -65,6 +73,7 @@ ParseRule Rules[] = {//infix,          prefix,         precedence
     [TK_SIZEOF]    = {expr_sizeof,     NULL,           PREC_NONE },
     [TK_WHILE]     = {NULL,            NULL,           PREC_NONE },
     [TK_VOID]      = {NULL,            NULL,           PREC_NONE },
+    [TK_FLOAT]     = {expr_number,     NULL,           PREC_NONE },
     [TK_ASSIGN]    = {NULL,            expr_assign,    PREC_ASSIGNMENT },
     [TK_COND]      = {NULL,            expr_ternary,   PREC_TERNARY },
     [TK_LOR]       = {NULL,            expr_or,        PREC_OR },
@@ -118,41 +127,41 @@ static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
     next(sc, ctx); // 跳过匹配的 token
 }
 
-// 解析类型声明 (int, char, void)
-static int __ctype(context_t ctx, scanner sc) {
-    token_t tk = prst(sc);
-    int type = TP_INT; // 默认类型为整型
-    switch(tk.tk) {
-        case TK_INT:
-            type = TP_INT;
-            break;
-        case TK_CHAR:
-            type = TP_CHAR;
-            break;
-        case TK_VOID:
-            type = TP_VOID;
-            break;
-        default:
-            raise(sc->line, "Expected type declaration (int, char, void)");
-    }
-    next(sc, ctx); // 跳过类型声明
-    return type; // 返回解析的类型
-}
-
 // 解析标识符，并处理指针类型
 static token_t* __identifier(context_t ctx, scanner sc, int* type) {
     while(match(ctx, sc, TK_MUL)) {
-        *type += TP_PTR; // 处理指针类型
+        *type += TYPE_PTR; // 处理指针类型
     }
     expect(ctx, sc, TK_ID, "Expected identifier after type declaration");
     return SymFind(ctx, prev(sc));
+}
+
+// 解析类型声明
+static int match_type(context_t ctx, scanner sc) {
+    if(match(ctx, sc, TK_INT)){
+        ctx->expr_type = TYPE_INT;
+    } else if(match(ctx, sc, TK_CHAR)){
+        ctx->expr_type = TYPE_CHAR;
+    } else if(match(ctx, sc, TK_VOID)){
+        ctx->expr_type = TYPE_VOID;
+    } else if(match(ctx, sc, TK_FLOAT)){
+        ctx->expr_type = TYPE_FLOAT;
+    } else {
+        return 0; // 没有匹配到类型
+    }
+    return 1;
 }
 
 // 解析数字常量表达式
 static void expr_number(ParseFunctionArgs) {
     token_t current = prev(sc);
     emit(ctx, OP_IMM);
-    emit(ctx, current.val);
+    emit(ctx, current.val.uval);
+    if(current.type == TYPE_FLOAT) {
+        ctx->expr_type = TYPE_FLOAT;
+    } else {
+        ctx->expr_type = TYPE_INT;
+    }
 }
 
 // 解析括号表达式
@@ -166,8 +175,7 @@ static void expr_group(ParseFunctionArgs) {
 // 解析字符串字面量表达式
 static void expr_string(ParseFunctionArgs) {
     emit(ctx, OP_IMM);
-    emit(ctx, ctx->heap_cur);
-    emit(ctx, OP_STR);
+    emit(ctx, ctx->heap_cur + (uint64_t)ctx->heap); // 字符串在堆中的地址
     do{
         token_t current = prev(sc);
         char c = 0;
@@ -191,6 +199,7 @@ static void expr_string(ParseFunctionArgs) {
     }while(match(ctx, sc, TK_STR));
     ctx->heap[ctx->heap_cur] = '\0';
     ctx->heap_cur++;
+    ctx->expr_type = TYPE_CHAR + TYPE_PTR; // 字符串类型为 char* (指针类型)
 }
 
 // 解析赋值表达式 (目前实现为报错)
@@ -204,13 +213,17 @@ static void expr_unary(ParseFunctionArgs) {
     parse_expr(ctx, sc, PREC_UNARY); // 解析表达式
     switch(current.tk) {
         case TK_ADD:
-            // 正号，直接返回
             break;
         case TK_SUB:
             emit(ctx, OP_PUSH);
             emit(ctx, OP_IMM);
             emit(ctx, -1);
-            emit(ctx, OP_MUL);
+            if(ctx->expr_type == TYPE_FLOAT){
+                emit(ctx, OP_FLT);
+                emit(ctx, OP_MUL_F);
+            } else {
+                emit(ctx, OP_MUL);
+            }
             break;
         case TK_NOT:
             emit(ctx, OP_NOT); // 逻辑非，生成逻辑非指令
@@ -225,7 +238,7 @@ static void expr_preinc(ParseFunctionArgs) {
     token_t current = prev(sc);
     expect(ctx, sc, TK_ID, "Expected identifier after increment/decrement operator");
     token_t* id = SymFind(ctx, prev(sc));
-    if(id->class == 0) {
+    if(id->klass == 0) {
         raise(sc->line, "Identifier not declared before use");
     }
     uint64_t op_set = OP_S_GLO;
@@ -240,36 +253,52 @@ static void expr_preinc(ParseFunctionArgs) {
     } else if(current.tk == TK_DEC) {
         op_calc = OP_SUB; // 自减
     }
+    if(id->type == TYPE_FLOAT){
+        op_calc += (OP_ADD_F - OP_ADD);
+    }
     emit(ctx, op_get);
-    emit(ctx, id->val);
+    emit(ctx, id->val.uval);
     emit(ctx, OP_PUSH);
     emit(ctx, OP_IMM);
     emit(ctx, 1);
+    if(id->type == TYPE_FLOAT) {
+        emit(ctx, OP_FLT);
+    }
     emit(ctx, op_calc);
     emit(ctx, op_set);
-    emit(ctx, id->val);
+    emit(ctx, id->val.uval);
+    ctx->expr_type = id->type;
 }
 
 // 解析二元表达式
 static void expr_binary(ParseFunctionArgs) {
+    int type_left = ctx->expr_type;
     emit(ctx, OP_PUSH);
     token_t current = prev(sc);
     PrecLv level = Rules[current.tk].prec; // 获取当前操作符的优先级
-    parse_expr(ctx, sc, level + 1); // 解析左侧表达式
+    parse_expr(ctx, sc, level + 1); // 解析右侧表达式
+    int type_right = ctx->expr_type;    // 获取右侧表达式的类型
+    int calc_flt = (type_left == TYPE_FLOAT || type_right == TYPE_FLOAT) ? (OP_ADD_F - OP_ADD) : 0; // 检查是否有浮点数参与运算
+    if(calc_flt && ( type_left != TYPE_FLOAT || type_right != TYPE_FLOAT)){
+        raise(sc->line, "Cannot calculate between float and int directly");
+    }
     switch(current.tk) {
         case TK_ADD:
-            emit(ctx, OP_ADD); // 加法
+            emit(ctx, OP_ADD + calc_flt); // 加法
             break;
         case TK_SUB:
-            emit(ctx, OP_SUB); // 减法
+            emit(ctx, OP_SUB + calc_flt); // 减法
             break;
         case TK_MUL:
-            emit(ctx, OP_MUL); // 乘法
+            emit(ctx, OP_MUL + calc_flt); // 乘法
             break;
         case TK_DIV:
-            emit(ctx, OP_DIV); // 除法
+            emit(ctx, OP_DIV + calc_flt); // 除法
             break;
         case TK_MOD:
+            if(calc_flt){
+                raise(sc->line, "Cannot use modulus operator on float type");
+            }
             emit(ctx, OP_MOD); // 取模
             break;
         case TK_SHL:
@@ -279,12 +308,21 @@ static void expr_binary(ParseFunctionArgs) {
             emit(ctx, OP_SHR); // 右移
             break;
         case TK_AND:
+            if(calc_flt){
+                raise(sc->line, "Cannot use bitwise AND operator on float type");
+            }
             emit(ctx, OP_AND); // 按位与
             break;
         case TK_OR:
+            if(calc_flt){
+                raise(sc->line, "Cannot use bitwise OR operator on float type");
+            }
             emit(ctx, OP_OR); // 按位或
             break;
         case TK_XOR:
+            if(calc_flt){
+                raise(sc->line, "Cannot use bitwise XOR operator on float type");
+            }
             emit(ctx, OP_XOR); // 按位异或
             break;
         case TK_EQ:
@@ -309,6 +347,7 @@ static void expr_binary(ParseFunctionArgs) {
             emit(ctx, OP_NOT);
             break;
     }
+    ctx->expr_type = calc_flt ? TYPE_FLOAT : TYPE_INT; // 设置表达式类型
 }
 
 // 解析逻辑与 (&&) 表达式
@@ -334,12 +373,13 @@ static void expr_or(ParseFunctionArgs) {
 static void expr_variable(ParseFunctionArgs) {
     token_t tk = prev(sc);     // 获取当前标识符
     token_t* id = SymFind(ctx, tk); // 在符号表中查找标识符
-    if(id->class == 0){
+    if(id->klass == 0){
         raise(sc->line, "Identifier not declared before use");
     }
-    if(id->class == TK_FUN || id->class == TK_SYS) {
+    ctx->expr_type = id->type;
+    if(id->klass == TK_FUN || id->klass == TK_SYS) {
         emit(ctx, OP_IMM);
-        emit(ctx, id->val); // 函数地址
+        emit(ctx, id->val.uval); // 函数地址
         return;
     }
     int op_set_code = OP_S_GLO; // 默认操作码为全局变量存储
@@ -351,18 +391,20 @@ static void expr_variable(ParseFunctionArgs) {
     if(match(ctx, sc, TK_INC) || match(ctx, sc, TK_DEC)) {
         token_t inc_dec = prev(sc); // 获取自增或自减操作符
         uint64_t op_calc = (inc_dec.tk == TK_INC) ? OP_ADD : OP_SUB;
+        uint64_t op_calc_f = (id->type == TYPE_FLOAT) ? (OP_ADD_F - OP_ADD) : 0;
         emit(ctx, op_get_code);
-        emit(ctx, id->val);
+        emit(ctx, id->val.uval);
         emit(ctx, OP_PUSH);
         emit(ctx, OP_PUSH);
         emit(ctx, OP_IMM);
         emit(ctx, 1);
-        emit(ctx, op_calc);
+        if(op_calc_f){
+            emit(ctx, OP_FLT);
+        }
+        emit(ctx, op_calc + op_calc_f);
         emit(ctx, op_set_code);
-        emit(ctx, id->val);
-        emit(ctx, OP_IMM);
-        emit(ctx, 0);
-        emit(ctx, OP_ADD);
+        emit(ctx, id->val.uval);
+        emit(ctx, OP_POP);
         return;
     }
     if(can_assign && match(ctx, sc, TK_ASSIGN)) {
@@ -371,7 +413,7 @@ static void expr_variable(ParseFunctionArgs) {
     } else {
         emit(ctx, op_get_code);
     }
-    emit(ctx, id->val);
+    emit(ctx, id->val.uval);
 }
 
 static void expr_sizeof(ParseFunctionArgs) { // to fix bug
@@ -379,21 +421,21 @@ static void expr_sizeof(ParseFunctionArgs) { // to fix bug
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'sizeof'");
     if(match(ctx, sc, TK_ID)){
         token_t* id = SymFind(ctx, prev(sc));
-        if(id->class == 0) {
+        if(id->klass == 0) {
             raise(sc->line, "Identifier not declared before use");
         }
-        if(id->class == TK_FUN){
+        if(id->klass == TK_FUN){
             emit(ctx, 8);
         } else {
-            emit(ctx, (id->type == TP_VOID || id->type == TP_CHAR) ? 1 : 8); // 函数或指针类型为 8 字节，其他类型为 1 字节
+            emit(ctx, (id->type == TYPE_VOID || id->type == TYPE_CHAR) ? 1 : 8); // 函数或指针类型为 8 字节，其他类型为 1 字节
         }
     } else {
         expect(ctx, sc, TK_INT, "Expected type after 'sizeof'");
-        int type = __ctype(ctx, sc); // 解析类型
-        if(type == TP_VOID) {
+        int type = TYPE_VOID; // 解析类型 @todo
+        if(type == TYPE_VOID) {
             raise(sc->line, "Cannot use sizeof on void type");
         }
-        emit(ctx, (type == TP_CHAR || type == TP_VOID) ? 1 : 8); // char 和 void 类型为 1 字节，其他类型为 8 字节
+        emit(ctx, (type == TYPE_CHAR || type == TYPE_VOID) ? 1 : 8); // char 和 void 类型为 1 字节，其他类型为 8 字节
     }
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'sizeof' expression");
 }
@@ -454,6 +496,7 @@ static void expr_list(ParseFunctionArgs) {
     emit(ctx, OP_IMM);
     emit(ctx, (uint64_t)buildin_list); // 使用内置列表函数
     emit(ctx, OP_PUSH);
+    emit(ctx, OP_PUSH);
     int member_count = 0;
     do{
         member_count++;
@@ -463,12 +506,13 @@ static void expr_list(ParseFunctionArgs) {
     expect(ctx, sc, TK_RI_BRACE, "Expected '}' after list"); // 确保以右大括号结尾
     emit(ctx, OP_CALL);
     emit(ctx, member_count); // 使用成员计数
+    ctx->expr_type = TYPE_INT + TYPE_PTR; // 列表类型为 int* (指针类型)
 }
 
 // 根据优先级解析表达式
-void parse_expr(context_t ctx, scanner sc, PrecLv level) {
+static void parse_expr(context_t ctx, scanner sc, PrecLv level) {
     next(sc, ctx);
-    ParseFn prefixFn = Rules[prev(sc).tk].prefix; 
+    ParseFn prefixFn = Rules[prev(sc).tk].prefix;
     if(prefixFn == NULL) {
         raise(sc->line, "Expected expression, but something else found");
     }
@@ -510,7 +554,7 @@ static void stmt_return(ParseFunctionArgs) {
 }
 
 static void stmt_break(ParseFunctionArgs) {
-    if(SymLoopDepth(ctx) == 0) {
+    if(ctx->loop_depth == 0) {
         raise(sc->line, "Break statement not inside a loop");
     }
     emit(ctx, OP_JEND);
@@ -518,7 +562,7 @@ static void stmt_break(ParseFunctionArgs) {
 }
 
 static void stmt_continue(ParseFunctionArgs) {
-    if(SymLoopDepth(ctx) == 0) {
+    if(ctx->loop_depth == 0) {
         raise(sc->line, "Continue statement not inside a loop");
     }
     emit(ctx, OP_JEND);
@@ -527,38 +571,28 @@ static void stmt_continue(ParseFunctionArgs) {
 
 // 解析变量声明语句
 static void stmt_decl(ParseFunctionArgs) {
-    int base_type = 0;
-    token_t type = prev(sc); // 获取当前类型声明
-    if(type.tk == TK_INT) {
-        base_type = TP_INT; // 整型
-    } else if(type.tk == TK_CHAR) {
-        base_type = TP_CHAR; // 字符型
-    } else if(type.tk == TK_VOID) {
-        base_type = TP_VOID; // 空类型
-    } else {
-        raise(sc->line, "Expected type declaration (int, char, void)");
-    }
-    int real_type = base_type;
+    int base_type = ctx->expr_type;
     do{
+        int real_type = base_type;
         token_t* id =  __identifier(ctx, sc, &real_type); // 解析标识符
-        if(id->class == TK_LOC) {
+        if(id->klass == TK_LOC) {
             raise(sc->line, "Variable '%.*s' already defined", id->len, id->name);
-        } else if(id->class == TK_GLO || id->class == TK_FUN || id->class == TK_SYS) {
+        } else if(id->klass == TK_GLO || id->klass == TK_FUN || id->klass == TK_SYS) {
             id = SymAdd(ctx, *id); // 如果是全局变量或函数，则添加到符号表
         }
-        if(real_type == TP_VOID) {
+        if(real_type == TYPE_VOID) {
             raise(sc->line, "Variable '%.*s' cannot be of type void", id->len, id->name);
         }
         id->type = real_type;
-        id->class = TK_LOC;
-        id->val = id - ctx->sym_loc;
+        id->klass = TK_LOC;
+        id->val.uval = id - ctx->sym_loc;
         if(match(ctx, sc, TK_ASSIGN)) {
             parse_expr(ctx, sc, PREC_ASSIGNMENT);
         } else {
             emit(ctx, OP_IMM);
             emit(ctx, 0);
         }
-        emit(ctx, OP_PUSH); 
+        emit(ctx, OP_PUSH);
     }while(match(ctx, sc, TK_COMMA));
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after variable declaration"); // 确保以分号结尾
 }
@@ -577,7 +611,7 @@ static void stmt_while(ParseFunctionArgs) {
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode);
     patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
-    emit(ctx, OP_LOOP);
+    patch_loop_jumps(ctx, addr_start, ctx->btcode_cur);
 }
 
 static void stmt_dowhile(ParseFunctionArgs) {
@@ -585,30 +619,21 @@ static void stmt_dowhile(ParseFunctionArgs) {
     SymStartLoop(ctx);
     parse_stmt(ctx, sc);
     SymEndLoop(ctx);
-    emit(ctx, OP_JMP);
-    uint64_t* addr_j1 = blank(ctx); // 留白，跳转到条件检查
-    uint64_t* addr_cond = ctx->btcode_cur;
     expect(ctx, sc, TK_WHILE, "Expected 'while' after 'do'");
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
     emit(ctx, OP_NOT);
-    emit(ctx, OP_JZ); 
-    emit(ctx, addr_start - ctx->btcode); // 如果条件非假，跳转到循环开始
-    emit(ctx, OP_JMP);
-    uint64_t* addr_end = blank(ctx); // 留白，跳转到循环结束
-    patch(ctx, addr_j1, ctx->btcode_cur - ctx->btcode); // 填充跳转地址
-    emit(ctx, OP_JMP);
-    emit(ctx, addr_cond - ctx->btcode); // 跳转到条件检查
-    patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode); // 填充循环结束地址
-    emit(ctx, OP_LOOP); // 循环结束指令
+    emit(ctx, OP_JZ);
+    emit(ctx, addr_start - ctx->btcode);
+    patch_loop_jumps(ctx, addr_start, ctx->btcode_cur);
 }
 
 // 解析 for 循环语句
 static void stmt_for(ParseFunctionArgs) {
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'for'");
     if(match(ctx, sc, TK_SEMICOLON)) {
-    } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
+    } else if(match_type(ctx, sc)) {
         stmt_decl(ctx, sc, 1); // 解析 for 循环的初始化部分
     } else {
         stmt_expr(ctx, sc, 1); // 解析 for 循环的初始化表达式
@@ -640,7 +665,7 @@ static void stmt_for(ParseFunctionArgs) {
     if(addr_end) {
         patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
     }
-    emit(ctx, OP_LOOP);
+    patch_loop_jumps(ctx, addr_start, ctx->btcode_cur);
 }
 
 // 解析 if 语句
@@ -663,7 +688,7 @@ static void stmt_if(ParseFunctionArgs){
 }
 
 // 解析单个语句
-void parse_stmt(context_t ctx, scanner sc) {
+static void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
         stmt_if(ctx, sc, 1); // 解析 if 语句
     } else if(match(ctx, sc, TK_WHILE)) {
@@ -674,7 +699,7 @@ void parse_stmt(context_t ctx, scanner sc) {
         stmt_return(ctx, sc, 1);
     } else if(match(ctx, sc, TK_LE_BRACE)) {
         stmt_block(ctx, sc, 1);
-    } else if(match(ctx, sc, TK_INT) || match(ctx, sc, TK_CHAR) || match(ctx, sc, TK_VOID)) {
+    } else if(match_type(ctx, sc)) {
         stmt_decl(ctx, sc, 1);
     } else if(match(ctx, sc, TK_SEMICOLON)) {
         // 空语句，什么都不做
@@ -689,22 +714,22 @@ void parse_stmt(context_t ctx, scanner sc) {
     }
 }
 
-void parse_enum(context_t ctx, scanner sc){
+static void parse_enum(context_t ctx, scanner sc){
     expect(ctx, sc, TK_LE_BRACE, "Expected '{' after 'enum' declaration");
     int enum_value = 0;
     while(!match(ctx, sc, TK_RI_BRACE)){
         expect(ctx, sc, TK_ID, "Expected identifier in enum declaration");
         token_t* id = SymFind(ctx, prev(sc));
-        if(id->class != 0) {
+        if(id->klass != 0) {
             raise(sc->line, "Enum member '%.*s' already defined", id->len, id->name);
         }
-        id->class = TK_SYS;
-        id->type = TP_INT;
+        id->klass = TK_SYS;
+        id->type = TYPE_INT;
         if(match(ctx, sc, TK_ASSIGN)) {
             expect(ctx, sc, TK_NUM, "Expected number after '=' in enum declaration");
-            enum_value = prev(sc).val;
+            enum_value = prev(sc).val.ival;
         }
-        id->val = enum_value;
+        id->val.ival = enum_value;
         enum_value++;
         if(!match(ctx, sc, TK_COMMA)) { // 如果不是逗号分隔, 必然是最后一个枚举成员
             expect(ctx, sc, TK_RI_BRACE, "Expected ',' or '}' in enum declaration");
@@ -714,83 +739,106 @@ void parse_enum(context_t ctx, scanner sc){
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after enum declaration");
 }
 
+// 解析函数声明
+static void parse_function(context_t ctx, scanner sc, token_t* name, int need_jit){
+    emit(ctx, OP_JMP);
+    uint64_t* addr = blank(ctx); // 留白，函数结束地址
+    name->klass = TK_FUN;
+    if(need_jit){
+        name->val.pval = jitalloc();
+    } else {
+        name->val.uval = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
+    }
+    emit(ctx, OP_FUNC); // 函数入口标记
+    SymSetloc(ctx);
+    int arg_count = 0;
+    while(!match(ctx, sc, TK_RI_PAREN)) { // 解析函数参数
+        if(arg_count > 0) {
+            expect(ctx, sc, TK_COMMA, "Expected ',' in function argument list");
+        }
+        if(!match_type(ctx, sc)) {
+            raise(sc->line, "Expected type declaration for function argument");
+        }
+        int arg_type = ctx->expr_type; // 解析参数类型
+        token_t* arg_id = __identifier(ctx, sc, &arg_type); // 解析参数标识符
+        if(arg_id->klass == TK_LOC) {
+            raise(sc->line, "Function argument '%.*s' already defined in this scope", arg_id->len, arg_id->name);
+        } else if(arg_id->klass == TK_GLO || arg_id->klass == TK_FUN) {
+            arg_id = SymAdd(ctx, *arg_id); // 如果是全局变量或函数，则添加到符号表
+        }
+        arg_id->type = arg_type; // 设置参数类型
+        arg_id->klass = TK_LOC; // 设置为局部变量
+        arg_id->val.uval = arg_id - ctx->sym_loc; // 计算局部变量的偏移量
+        arg_count++;
+    }
+    expect(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
+    stmt_block(ctx, sc, 1);
+    SymEndloc(ctx);
+    emit(ctx, OP_IMM);  // 配置默认返回值
+    emit(ctx, 0);
+    emit(ctx, OP_RET);
+    patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充函数结束地址
+    if(need_jit) {
+        compile(ctx, name->val.pval, addr - ctx->btcode + 1, ctx->btcode_cur - ctx->btcode); // 编译静态函数
+    }
+}
+
+// 解析定义变量时的赋值表达式
+static void parse_assign(context_t ctx, scanner sc, token_t* id){
+    parse_expr(ctx, sc, PREC_ASSIGNMENT);
+    if(id->type != ctx->expr_type && (id->type == TYPE_FLOAT || ctx->expr_type == TYPE_FLOAT)) {
+        raise(sc->line, "Cannot assign between float and int types directly");
+    }
+    int op_set_code = (ctx->sym_loc != 0) ? OP_S_LOC : OP_S_GLO;
+    emit(ctx, op_set_code);
+    emit(ctx, id->val.uval);
+}
+
+
 // 解析全局声明 (变量或函数)
-void parse_global(context_t ctx, scanner sc) {
+static void parse_global(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_ENUM)) {
         parse_enum(ctx, sc); // 解析枚举声明
         return;
     }
     int in_static = match(ctx, sc, TK_STATIC); // 检查是否为静态变量，仅对函数生效。将函数jit编译为静态函数
-    int base_type = TP_INT; // 基本类型，默认为整型
-    int real_type = TP_INT; // 实际类型，默认为整型
-    real_type = base_type = __ctype(ctx, sc); // 解析类型声明
+    if(!match_type(ctx, sc)) {
+        raise(sc->line, "Expected type declaration");
+    }
+    int base_type = ctx->expr_type; // 基本类型
+    int real_type = ctx->expr_type; // 实际类型
     token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
-    if(id->class == TK_GLO || id->class == TK_FUN) {
+    if(id->klass == TK_GLO || id->klass == TK_FUN) {
         raise(sc->line, "Global variable '%.*s' already defined", id->len, id->name);
     }
     id->type = real_type; // 设置变量类型
     if(match(ctx, sc, TK_LE_PAREN)){    // 函数声明
-        emit(ctx, OP_JMP);
-        uint64_t* addr = blank(ctx); // 留白，函数结束地址
-        id->class = TK_FUN;
-        if(in_static){
-            id->val = jitalloc();
-        } else {
-            id->val = ctx->btcode_cur - ctx->btcode; // 函数地址为当前字节码位置
-        }
-        emit(ctx, OP_FUNC); // 函数入口标记
-        SymSetloc(ctx);
-        int arg_count = 0;
-        while(!match(ctx, sc, TK_RI_PAREN)) { // 解析函数参数
-            if(arg_count > 0) {
-                expect(ctx, sc, TK_COMMA, "Expected ',' in function argument list");
-            }
-            int arg_type = __ctype(ctx, sc); // 解析参数类型
-            token_t* arg_id = __identifier(ctx, sc, &arg_type); // 解析参数标识符
-            if(arg_id->class == TK_LOC) {
-                raise(sc->line, "Function argument '%.*s' already defined in this scope", arg_id->len, arg_id->name);
-            } else if(arg_id->class == TK_GLO || arg_id->class == TK_FUN) {
-                arg_id = SymAdd(ctx, *arg_id); // 如果是全局变量或函数，则添加到符号表
-            }
-            arg_id->type = arg_type; // 设置参数类型
-            arg_id->class = TK_LOC; // 设置为局部变量
-            arg_id->val = arg_id - ctx->sym_loc; // 计算局部变量的偏移量
-            arg_count++;
-        }
-        expect(ctx, sc, TK_LE_BRACE, "Expected '{' after function declaration");
-        stmt_block(ctx, sc, 1);
-        SymEndloc(ctx);
-        emit(ctx, OP_IMM);  // 配置默认返回值
-        emit(ctx, 0);
-        emit(ctx, OP_RET);
-        patch(ctx, addr, ctx->btcode_cur - ctx->btcode); // 填充函数结束地址
-        if(in_static) {
-            compile(ctx, id->val, addr - ctx->btcode + 1, ctx->btcode_cur - ctx->btcode); // 编译静态函数
-        }
-    } else {
-        define_loop:
-        id->class = TK_GLO; 
-        id->val = id - ctx->sym;
-        if(match(ctx, sc, TK_ASSIGN)) {
-            parse_expr(ctx, sc, PREC_ASSIGNMENT);
-        } else {
-            emit(ctx, OP_IMM); // 初始化为0
-            emit(ctx, 0);
-        }
-        emit(ctx, OP_S_GLO);
-        emit(ctx, id->val);   // 使用全局变量的偏移量
-        if(match(ctx, sc, TK_SEMICOLON)){
-            return;
-        } else if(!match(ctx, sc, TK_COMMA)) {
-            raise(sc->line, "Expected ',' or ';' after global variable declaration");
-        }
-        id = __identifier(ctx, sc, &real_type); // 继续解析下一个标识符
-        if(id->class == TK_GLO || id->class == TK_FUN) {
-            raise(sc->line, "Global variable '%.*s' already defined", id->len, id->name);
-        }
-        id->type = real_type; // 设置变量类型
-        goto define_loop;
+        parse_function(ctx, sc, id, in_static);
+        return;
     }
+    define_loop:
+    id->klass = TK_GLO;
+    id->val.uval = id - ctx->sym;
+    if(match(ctx, sc, TK_ASSIGN)) {
+        parse_expr(ctx, sc, PREC_ASSIGNMENT);
+    } else {
+        emit(ctx, OP_IMM); // 初始化为0
+        emit(ctx, 0);
+    }
+    emit(ctx, OP_S_GLO);
+    emit(ctx, id->val.uval);   // 使用全局变量的偏移量
+    if(match(ctx, sc, TK_SEMICOLON)){
+        return;
+    } else if(!match(ctx, sc, TK_COMMA)) {
+        raise(sc->line, "Expected ',' or ';' after global variable declaration");
+    }
+    real_type = base_type;
+    id = __identifier(ctx, sc, &real_type); // 继续解析下一个标识符
+    if(id->klass == TK_GLO || id->klass == TK_FUN) {
+        raise(sc->line, "Global variable '%.*s' already defined", id->len, id->name);
+    }
+    id->type = real_type; // 设置变量类型
+    goto define_loop;
 }
 
 // 编译源代码，生成字节码
@@ -800,15 +848,15 @@ void parse(context_t ctx, scanner sc) {
         parse_global(ctx, sc);// 全局声明
     }
 
-    if(ctx->sym[ctx->main_id].class != TK_FUN) {
+    if(ctx->sym[ctx->main_id].klass != TK_FUN) {
         raise(sc->line, "Main function not defined");
     }
 
     emit(ctx, OP_IMM);
-    emit(ctx, ctx->sym[ctx->main_id].val);
+    emit(ctx, ctx->sym[ctx->main_id].val.uval);
     emit(ctx, OP_PUSH);
     emit(ctx, OP_PUSH);
     emit(ctx, OP_CALL); // 调用主函数
     emit(ctx, 0); // 主函数没有参数
-    emit(ctx, OP_RET); // 程序结束指令
+    emit(ctx, OP_EXIT); // 程序结束指令
 }
