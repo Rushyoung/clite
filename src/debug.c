@@ -113,7 +113,7 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
         printf("%-20s | ", name_display_buffer);
 
         // 打印 Class
-        printf("%-9s | ", (s.class >= TK_NUM && s.class < 256 && token_name[s.class]) ? token_name[s.class] : (s.class == 0 ? "NO_CLASS" : "OTHER_CLS"));
+        printf("%-9s | ", (s.klass >= TK_NUM && s.klass < 256 && token_name[s.klass]) ? token_name[s.klass] : (s.klass == 0 ? "NO_CLASS" : "OTHER_CLS"));
 
         // 打印 CType (type 字段) - 直接在此处处理
         int ctype_val = s.type;
@@ -130,10 +130,11 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
 
         const char* base_type_name;
         switch (base_type) {
-            case TYPE_VOID: base_type_name = "void"; break;
-            case TYPE_CHAR: base_type_name = "char"; break;
-            case TYPE_INT:  base_type_name = "int";  break;
-            default:      base_type_name = "unk_base"; break;
+            case TYPE_VOID:  base_type_name = "void";  break;
+            case TYPE_CHAR:  base_type_name = "char";  break;
+            case TYPE_INT:   base_type_name = "int";   break;
+            case TYPE_FLOAT: base_type_name = "float"; break;
+            default:      base_type_name = "undefined"; break;
         }
 
         int written = snprintf(ctype_ptr, remaining_space, "%s", base_type_name);
@@ -151,13 +152,7 @@ void DumpSymbol(context_t ctx) { // Renamed from DumpSymtable to match previous 
         }
         *ctype_ptr = '\0'; // 确保空终止
 
-        printf("%-12s | ", ctype_str_buffer);
-
-        // 打印 Hash
-        printf("0x%08X | ", s.hash);
-
-        // 打印 Val
-        printf("%llu\n", s.val);
+        printf("%-12s | 0x%08X | %llu\n", ctype_str_buffer, s.hash, s.val);
     }
     printf("--- End of Symbol Table Dump ---\n");
 }
