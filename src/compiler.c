@@ -1,7 +1,6 @@
 #include "compiler.h"
 
 #include "opcode.h"
-#include "native.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -165,17 +164,17 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x0F); emit_a(0x9F); emit_a(0xC0);               // setg AL; 如果 RBX < RAX, 设置 AL 为 1
                 emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL; 扩展 AL 到 RAX
                 break;
-            case OP_SHL: // @bug: 使用 CL 寄存器作为移位量
-                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
-                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
-                emit_a(0x88); emit_a(0xCB);                             // mov CL, BL; 将 AL 的值存入 CL 寄存器
-                emit_a(0x48); emit_a(0xD3); emit_a(0xE0);               // shl RAX, CL; 使用 CL 寄存器作为移位量
+            case OP_SHL:
+                emit_a(0x48); emit_a(0x89); emit_a(0xC1);               // mov RCX, RAX; Save RHS (count)
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8;
+                emit_a(0x48); emit_a(0x8B); emit_a(0x06);               // mov RAX, [RSI]; Load LHS to RAX
+                emit_a(0x48); emit_a(0xD3); emit_a(0xE0);               // shl RAX, CL;
                 break;
-            case OP_SHR: // @bug: 使用 CL 寄存器作为移位量
-                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
-                emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
-                emit_a(0x88); emit_a(0xCB);                             // mov CL, BL; 将 RBX 的低 8 位移动到 CL
-                emit_a(0x48); emit_a(0xD3); emit_a(0xE8);               // shr RAX, CL; 使用 CL 寄存器作为移位量
+            case OP_SHR:
+                emit_a(0x48); emit_a(0x89); emit_a(0xC1);               // mov RCX, RAX; Save RHS (count)
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8;
+                emit_a(0x48); emit_a(0x8B); emit_a(0x06);               // mov RAX, [RSI]; Load LHS to RAX
+                emit_a(0x48); emit_a(0xD3); emit_a(0xE8);               // shr RAX, CL;
                 break;
             case OP_NOT:
                 emit_a(0x48); emit_a(0x85); emit_a(0xC0); // test RAX, RAX
@@ -197,12 +196,48 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x5E); // pop RSI // 恢复栈顶sp
                 emit_a(0x5F); // pop RDI // 恢复基址bp
                 emit_a(0x48); emit_a(0x83); emit_a(0xC4); emit_a(0x28); // add rsp, 40
-                emit_a(0x48); emit_a(0xC7); emit_a(0xC2); emit_e((*pc + 1) * 8); // mov RDX, 回退量 = (argc+1)*8
+                emit_a(0x48); emit_a(0xC7); emit_a(0xC2); emit_e((*pc + 2) * 8); // mov RDX, 回退量 = (argc+2)*8
                 emit_a(0x48); emit_a(0x29); emit_a(0xD6); // sub RSI, RDX; 恢复虚拟栈指针
                 pc++;
                 break;
             case OP_RET:
                 emit_a(0xC3); // ret
+                break;
+            case OP_FLT:
+                emit_a(0xF2); emit_a(0x48); emit_a(0x0F); emit_a(0x2A); emit_a(0xC0); // cvtsi2sd xmm0, rax
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x7E); emit_a(0xC0); // movq rax, xmm0
+                break;
+            case OP_INT:
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC0); // movq xmm0, rax
+                emit_a(0xF2); emit_a(0x48); emit_a(0x0F); emit_a(0x2C); emit_a(0xC0); // cvttsd2si rax, xmm0
+                break;
+            case OP_ADD_F:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8
+                emit_a(0xF3); emit_a(0x0F); emit_a(0x7E); emit_a(0x06); // movq xmm0, [RSI] (Load LHS)
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC8); // movq xmm1, rax (Load RHS)
+                emit_a(0xF2); emit_a(0x0F); emit_a(0x58); emit_a(0xC1); // addsd xmm0, xmm1
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x7E); emit_a(0xC0); // movq rax, xmm0
+                break;
+            case OP_SUB_F:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8
+                emit_a(0xF3); emit_a(0x0F); emit_a(0x7E); emit_a(0x06); // movq xmm0, [RSI] (Load LHS)
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC8); // movq xmm1, rax (Load RHS)
+                emit_a(0xF2); emit_a(0x0F); emit_a(0x5C); emit_a(0xC1); // subsd xmm0, xmm1
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x7E); emit_a(0xC0); // movq rax, xmm0
+                break;
+            case OP_MUL_F:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8
+                emit_a(0xF3); emit_a(0x0F); emit_a(0x7E); emit_a(0x06); // movq xmm0, [RSI] (Load LHS)
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC8); // movq xmm1, rax (Load RHS)
+                emit_a(0xF2); emit_a(0x0F); emit_a(0x59); emit_a(0xC1); // mulsd xmm0, xmm1
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x7E); emit_a(0xC0); // movq rax, xmm0
+                break;
+            case OP_DIV_F:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8
+                emit_a(0xF3); emit_a(0x0F); emit_a(0x7E); emit_a(0x06); // movq xmm0, [RSI] (Load LHS)
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC8); // movq xmm1, rax (Load RHS)
+                emit_a(0xF2); emit_a(0x0F); emit_a(0x5E); emit_a(0xC1); // divsd xmm0, xmm1
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x7E); emit_a(0xC0); // movq rax, xmm0
                 break;
             default:
                 fprintf(stderr, "Unknown opcode: %llu in %d\n", ip, (int)(pc - ctx->btcode - 1));
