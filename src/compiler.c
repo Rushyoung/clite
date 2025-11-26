@@ -12,15 +12,15 @@
 #endif
 
 #define emit_a(x) (*jit++ = (x)) // emit assembler instruction
-#define emit_e(x) ({*(uint32_t*)jit = (x); jit += 4;}) // emit immediate value (32-bit)
-#define emit_i(x) ({*(uint64_t*)jit = (x); jit += 8;}) // emit immediate value
+#define emit_e(x) ({*(uint32_t*)jit = (uint32_t)(x); jit += 4;}) // emit immediate value (32-bit)
+#define emit_i(x) ({*(uint64_t*)jit = (uint64_t)(x); jit += 8;}) // emit immediate value
 #define emit_v(x) ({\
     uint16_t in = (uint16_t)(jit - fun); \
     uint16_t to = (uint16_t)((x) - bt_start); \
     patch_in[patch_count] = in; patch_to[patch_count] = to; ; \
     patch_count++; jit += 4; \
 })
-#define JIT_SIZE 65536
+#define JIT_SIZE 65535
 
 void* jitalloc() {
     #ifdef _WIN32
@@ -42,13 +42,12 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
     printf("Compiling bytecode from %zu to %zu\n", bt_start, bt_end);
     uint8_t*  jit = fun; // Save the start of the allocated memory
     uint64_t* pc = ctx->btcode + bt_start;
-    uint64_t  ip = 0;
     uint64_t* end = ctx->btcode + bt_end;
-    uint32_t  bt2jit[JIT_SIZE / 8] = {};    // bt2jit[id] = val，这个函数第id个位置的字节码，在jit的第val个位置
-    uint32_t  patch_in[4096] = {};          // patch_in[id] = in
-    uint32_t  patch_to[4096] = {};          // patch_to[id] = goal，代表在in个字节处，应该填入一个64位地址
+    uint16_t  bt2jit[JIT_SIZE / 8] = {};    // bt2jit[id] = val，这个函数第id个位置的字节码，在jit的第val个位置
+    uint16_t  patch_in[4096] = {};          // patch_in[id] = in
+    uint16_t  patch_to[4096] = {};          // patch_to[id] = goal，代表在in个字节处，应该填入一个64位地址
     size_t    patch_count = 0;
-    for(ip = *pc; pc < end && ip != 0; ip = *pc) {
+    for(uint64_t ip = *pc; pc < end && ip != 0; ip = *pc) {
         bt2jit[pc - ctx->btcode - bt_start] = (uint16_t)(jit - fun);
         pc++;
         if(jit - fun >= JIT_SIZE) {

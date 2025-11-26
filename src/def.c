@@ -61,7 +61,7 @@ context_t InitContext(){
     }
 
     uint64_t constants[] = {
-        EXIT_SUCCESS, EXIT_FAILURE, NULL, EOF, RAND_MAX, ctx->heap
+        EXIT_SUCCESS, EXIT_FAILURE, (uint64_t)NULL, EOF, RAND_MAX, (uint64_t)ctx->heap
     };
     for(int ids = 0; ids < 6; ids++){
         next(keyword, ctx);
