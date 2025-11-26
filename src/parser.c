@@ -326,24 +326,24 @@ static void expr_binary(ParseFunctionArgs) {
             emit(ctx, OP_XOR); // 按位异或
             break;
         case TK_EQ:
-            emit(ctx, OP_EQU); // 等于
+            emit(ctx, calc_flt ? OP_EQU_F : OP_EQU);
             break;
         case TK_NE:
-            emit(ctx, OP_EQU);
+            emit(ctx, calc_flt ? OP_EQU_F : OP_EQU);
             emit(ctx, OP_NOT);
-            break; // 不等于
+            break;
         case TK_LT:
-            emit(ctx, OP_LES);
+            emit(ctx, calc_flt ? OP_LES_F : OP_LES);
             break;
         case TK_GT:
-            emit(ctx, OP_GRT);
+            emit(ctx, calc_flt ? OP_GRT_F : OP_GRT);
             break;
         case TK_LE:
-            emit(ctx, OP_GRT);
+            emit(ctx, calc_flt ? OP_GRT_F : OP_GRT);
             emit(ctx, OP_NOT);
             break;
         case TK_GE:
-            emit(ctx, OP_LES);
+            emit(ctx, calc_flt ? OP_LES_F : OP_LES);
             emit(ctx, OP_NOT);
             break;
     }

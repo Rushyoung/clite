@@ -221,6 +221,18 @@ void run(context_t ctx){
                 ax.uval = result.uval;
                 break;
             }
+            case OP_EQU_F:
+                sp--;
+                ax.uval = ((type_t){.uval=*sp}.fval == ax.fval);
+                break;
+            case OP_GRT_F:
+                sp--;
+                ax.uval = ((type_t){.uval=*sp}.fval > ax.fval);
+                break;
+            case OP_LES_F:
+                sp--;
+                ax.uval = ((type_t){.uval=*sp}.fval < ax.fval);
+                break;
             default:
                 fprintf(stderr, "Unknown opcode: %llu in %d\n", ip, (int)(pc - ctx->btcode - 1));
                 free(stk);

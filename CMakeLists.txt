@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(clite VERSION 0.90.0 LANGUAGES C)
+project(clite LANGUAGES C)
 
 # Set C standard
 set(CMAKE_C_STANDARD 11)

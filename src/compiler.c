@@ -20,13 +20,14 @@
     patch_in[patch_count] = in; patch_to[patch_count] = to; ; \
     patch_count++; jit += 4; \
 })
+#define JIT_SIZE 65536
 
 void* jitalloc() {
     #ifdef _WIN32
-    void* mem = VirtualAlloc(NULL, 4196, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    void* mem = VirtualAlloc(NULL, JIT_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!mem) { fprintf(stderr, "VirtualAlloc failed\n"); exit(1); }
 #else
-    void* mem = mmap(NULL, 4196, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    void* mem = mmap(NULL, JIT_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mem == MAP_FAILED) { perror("mmap"); exit(1); }
 #endif
     return mem;
@@ -43,14 +44,14 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
     uint64_t* pc = ctx->btcode + bt_start;
     uint64_t  ip = 0;
     uint64_t* end = ctx->btcode + bt_end;
-    uint16_t  bt2jit[4096] = {};   // bt2jit[id] = val，这个函数第id个位置的字节码，在jit的第val个位置
-    uint16_t  patch_in[4096] = {}; // patch_in[id] = in
-    uint16_t  patch_to[4096] = {}; // patch_to[id] = goal，代表在in个字节处，应该填入一个64位地址
+    uint32_t  bt2jit[JIT_SIZE / 8] = {};    // bt2jit[id] = val，这个函数第id个位置的字节码，在jit的第val个位置
+    uint32_t  patch_in[4096] = {};          // patch_in[id] = in
+    uint32_t  patch_to[4096] = {};          // patch_to[id] = goal，代表在in个字节处，应该填入一个64位地址
     size_t    patch_count = 0;
     for(ip = *pc; pc < end && ip != 0; ip = *pc) {
         bt2jit[pc - ctx->btcode - bt_start] = (uint16_t)(jit - fun);
         pc++;
-        if(jit - fun >= 4096) {
+        if(jit - fun >= JIT_SIZE) {
             fprintf(stderr, "JIT compilation buffer overflow\n");
             exit(1);
         }
@@ -242,6 +243,32 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC8); // movq xmm1, rax (Load RHS)
                 emit_a(0xF2); emit_a(0x0F); emit_a(0x5E); emit_a(0xC1); // divsd xmm0, xmm1
                 emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x7E); emit_a(0xC0); // movq rax, xmm0
+                break;
+            case OP_EQU_F:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶下移
+                emit_a(0xF3); emit_a(0x0F); emit_a(0x7E); emit_a(0x06); // movq xmm0, [RSI]; 加载 LHS (栈值)
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC8); // movq xmm1, rax; 加载 RHS (寄存器值)
+                emit_a(0x66); emit_a(0x0F); emit_a(0x2E); emit_a(0xC1); // ucomisd xmm0, xmm1; 比较
+                emit_a(0x0F); emit_a(0x9B); emit_a(0xC0);               // setnp AL; 如果 PF=0 (非NaN) 则 AL=1
+                emit_a(0x0F); emit_a(0x94); emit_a(0xC2);               // setz DL;  如果 ZF=1 (相等) 则 DL=1
+                emit_a(0x20); emit_a(0xD0);                             // and AL, DL; 结果 = (非NaN) & (相等)
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL; 扩展结果到 RAX
+                break;
+            case OP_GRT_F:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8
+                emit_a(0xF3); emit_a(0x0F); emit_a(0x7E); emit_a(0x06); // movq xmm0, [RSI] (LHS)
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC8); // movq xmm1, rax (RHS)
+                emit_a(0x66); emit_a(0x0F); emit_a(0x2E); emit_a(0xC1); // ucomisd xmm0, xmm1
+                emit_a(0x0F); emit_a(0x97); emit_a(0xC0);               // seta AL; 如果 CF=0 & ZF=0 (大于) 则 AL=1
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL
+                break;
+            case OP_LES_F:
+                emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8
+                emit_a(0xF3); emit_a(0x0F); emit_a(0x7E); emit_a(0x0E); // movq xmm1, [RSI] (LHS -> xmm1)
+                emit_a(0x66); emit_a(0x48); emit_a(0x0F); emit_a(0x6E); emit_a(0xC0); // movq xmm0, rax (RHS -> xmm0)
+                emit_a(0x66); emit_a(0x0F); emit_a(0x2E); emit_a(0xC1); // ucomisd xmm0, xmm1; 比较 RHS vs LHS
+                emit_a(0x0F); emit_a(0x97); emit_a(0xC0);               // seta AL; 检查是否 RHS > LHS
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL
                 break;
             default:
                 fprintf(stderr, "Unknown opcode: %llu in %d\n", ip, (int)(pc - ctx->btcode - 1));
