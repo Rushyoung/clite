@@ -76,7 +76,7 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 break;
             case OP_S_LOC:
                 emit_a(0x48); emit_a(0xBB); emit_i(*pc);                // mov RBX, immediate value
-                emit_a(0x48); emit_a(0x89); emit_a(0x04); emit_a(0xDF);
+                emit_a(0x48); emit_a(0x89); emit_a(0x04); emit_a(0xDF); // mov [RDI + RBX * 8], RAX
                 pc++;
                 break;
             case OP_JMP:
@@ -90,6 +90,11 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 break;
             case OP_IMM:
                 emit_a(0x48); emit_a(0xB8); emit_i(*pc); // mov RAX, immediate value
+                pc++;
+                break;
+            case OP_ADJ:
+                emit_a(0x48); emit_a(0xBB); emit_i(*pc);                // mov RBX, immediate value
+                emit_a(0x48); emit_a(0x8D); emit_a(0x34); emit_a(0xDF); // LEA RSI, [RDI + RBX * 8]
                 pc++;
                 break;
             case OP_PUSH:
@@ -118,18 +123,18 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 break;
             case OP_DIV:
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
-                emit_a(0x48); emit_a(0x89); emit_a(0xC3); // mov RBX, RAX
-                emit_a(0x48); emit_a(0x8B); emit_a(0x06); // mov RAX, [RSI]
-                emit_a(0x48); emit_a(0x99);  // cqo // 扩展 RAX 到 RDX:RAX
-                emit_a(0x48); emit_a(0xF7); emit_a(0xFB); // idiv RBX; 除法，结果在 RAX 中
+                emit_a(0x48); emit_a(0x89); emit_a(0xC3);               // mov RBX, RAX
+                emit_a(0x48); emit_a(0x8B); emit_a(0x06);               // mov RAX, [RSI]
+                emit_a(0x48); emit_a(0x99);                             // cqo; 扩展 RAX 到 RDX:RAX
+                emit_a(0x48); emit_a(0xF7); emit_a(0xFB);               // idiv RBX; 除法，结果在 RAX 中
                 break;
             case OP_MOD:
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
-                emit_a(0x48); emit_a(0x89); emit_a(0xC3); // mov RBX, RAX
-                emit_a(0x48); emit_a(0x8B); emit_a(0x06); // mov RAX, [RSI]
-                emit_a(0x48); emit_a(0x99);  // cqo // 扩展 RAX 到 RDX:RAX
-                emit_a(0x48); emit_a(0xF7); emit_a(0xFB); // idiv RBX; 除法，结果在 RAX 中
-                emit_a(0x48); emit_a(0x89); emit_a(0xD0); // mov RAX, RDX; 余数在 RDX 中
+                emit_a(0x48); emit_a(0x89); emit_a(0xC3);               // mov RBX, RAX
+                emit_a(0x48); emit_a(0x8B); emit_a(0x06);               // mov RAX, [RSI]
+                emit_a(0x48); emit_a(0x99);                             // cqo; 扩展 RAX 到 RDX:RAX
+                emit_a(0x48); emit_a(0xF7); emit_a(0xFB);               // idiv RBX; 除法，结果在 RAX 中
+                emit_a(0x48); emit_a(0x89); emit_a(0xD0);               // mov RAX, RDX; 余数在 RDX 中
                 break;
             case OP_OR:
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8
@@ -151,7 +156,7 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x8B); emit_a(0x1E);               // mov RBX, [RSI]
                 emit_a(0x48); emit_a(0x39); emit_a(0xD8);               // cmp RAX, RBX
                 emit_a(0x0F); emit_a(0x94); emit_a(0xC0);               // sete AL; 如果相等, 设置 AL 为 1
-                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0); // movzx RAX, AL; 扩展 AL 到 RAX
+                emit_a(0x0F); emit_a(0xB6); emit_a(0xC0);               // movzx RAX, AL; 扩展 AL 到 RAX
                 break;
             case OP_GRT:
                 emit_a(0x48); emit_a(0x83); emit_a(0xEE); emit_a(0x08); // sub RSI, 8; 栈顶指针减8

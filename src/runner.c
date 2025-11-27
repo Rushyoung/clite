@@ -48,6 +48,10 @@ void run(context_t ctx){
                 ax.uval = *pc;
                 pc++;
                 break;
+            case OP_ADJ:
+                sp = bp + *pc;
+                pc++;
+                break;
             case OP_POP:
                 sp--;
                 ax.uval = *sp;

@@ -534,11 +534,17 @@ static void stmt_expr(ParseFunctionArgs) {
     expect(ctx, sc, TK_SEMICOLON, "Expected ';' after expression statement"); // 确保以分号结尾
 }
 
-// 解析代码块语句 ({ ... })
+// 解析 { ... } 代码块
 static void stmt_block(ParseFunctionArgs) {
+    size_t old_sym_idx = ctx->sym_idx;
     while(!match(ctx, sc, TK_RI_BRACE)) { // 解析代码块中的语句
         parse_stmt(ctx, sc);
     }
+    if(ctx->sym_idx - old_sym_idx){
+        emit(ctx, OP_ADJ);
+        emit(ctx, old_sym_idx - (ctx->sym_loc - ctx->sym));
+    }
+    ctx->sym_idx = old_sym_idx;
 }
 
 // 解析 return 语句
@@ -553,6 +559,7 @@ static void stmt_return(ParseFunctionArgs) {
     emit(ctx, OP_RET);
 }
 
+// 解析 break 语句
 static void stmt_break(ParseFunctionArgs) {
     if(ctx->loop_depth == 0) {
         raise(sc->line, "Break statement not inside a loop");
@@ -561,6 +568,7 @@ static void stmt_break(ParseFunctionArgs) {
     emit(ctx, 0);
 }
 
+// 解析 continue 语句
 static void stmt_continue(ParseFunctionArgs) {
     if(ctx->loop_depth == 0) {
         raise(sc->line, "Continue statement not inside a loop");
@@ -574,7 +582,7 @@ static void stmt_decl(ParseFunctionArgs) {
     int base_type = ctx->expr_type;
     do{
         int real_type = base_type;
-        token_t* id =  __identifier(ctx, sc, &real_type); // 解析标识符
+        token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
         if(id->klass == TK_LOC) {
             raise(sc->line, "Variable '%.*s' already defined", id->len, id->name);
         } else if(id->klass == TK_GLO || id->klass == TK_FUN || id->klass == TK_SYS) {
@@ -601,12 +609,16 @@ static void stmt_decl(ParseFunctionArgs) {
 static void stmt_while(ParseFunctionArgs) {
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
     uint64_t* addr_start = ctx->btcode_cur;
+    size_t old_sym_idx = ctx->sym_idx;
+    emit(ctx, OP_ADJ);
+    emit(ctx, old_sym_idx - (ctx->sym_loc - ctx->sym));
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'while' condition");
     emit(ctx, OP_JZ);
     uint64_t* addr_end = blank(ctx);
     SymStartLoop(ctx);
     parse_stmt(ctx, sc);
+    ctx->sym_idx = old_sym_idx;
     SymEndLoop(ctx);
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode);
@@ -614,10 +626,15 @@ static void stmt_while(ParseFunctionArgs) {
     patch_loop_jumps(ctx, addr_start, ctx->btcode_cur);
 }
 
+// 解析 do-while 循环语句
 static void stmt_dowhile(ParseFunctionArgs) {
     uint64_t* addr_start = ctx->btcode_cur;
+    size_t old_sym_idx = ctx->sym_idx;
+    emit(ctx, OP_ADJ);
+    emit(ctx, old_sym_idx - (ctx->sym_loc - ctx->sym));
     SymStartLoop(ctx);
     parse_stmt(ctx, sc);
+    ctx->sym_idx = old_sym_idx;
     SymEndLoop(ctx);
     expect(ctx, sc, TK_WHILE, "Expected 'while' after 'do'");
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'while'");
@@ -642,6 +659,8 @@ static void stmt_for(ParseFunctionArgs) {
     int vars_declared = ctx->sym_idx - old_sym_idx;
     uint64_t* addr_start = ctx->btcode_cur;
     uint64_t* addr_end = NULL;
+    emit(ctx, OP_ADJ);
+    emit(ctx, old_sym_idx - (ctx->sym_loc - ctx->sym) + vars_declared);
     if(!match(ctx, sc, TK_SEMICOLON)) {
         parse_expr(ctx, sc, PREC_ASSIGNMENT); // 解析条件表达式
         expect(ctx, sc, TK_SEMICOLON, "Expected ';' after 'for' condition");
@@ -668,9 +687,8 @@ static void stmt_for(ParseFunctionArgs) {
     if(addr_end) {
         patch(ctx, addr_end, exit_addr - ctx->btcode);
     }
-    for(int i = 0; i < vars_declared; i++) {
-        emit(ctx, OP_POP);
-    }
+    emit(ctx, OP_ADJ);
+    emit(ctx, old_sym_idx - (ctx->sym_loc - ctx->sym));
     patch_loop_jumps(ctx, addr_start, exit_addr);
     ctx->sym_idx = old_sym_idx;
 }
@@ -697,11 +715,11 @@ static void stmt_if(ParseFunctionArgs){
 // 解析单个语句
 static void parse_stmt(context_t ctx, scanner sc) {
     if(match(ctx, sc, TK_IF)) {
-        stmt_if(ctx, sc, 1); // 解析 if 语句
+        stmt_if(ctx, sc, 1);
     } else if(match(ctx, sc, TK_WHILE)) {
-        stmt_while(ctx, sc, 1); // 解析 while 语句
+        stmt_while(ctx, sc, 1);
     } else if(match(ctx, sc, TK_FOR)) {
-        stmt_for(ctx, sc, 1); // 解析 for 语句
+        stmt_for(ctx, sc, 1);
     } else if(match(ctx, sc, TK_RETURN)) {
         stmt_return(ctx, sc, 1);
     } else if(match(ctx, sc, TK_LE_BRACE)) {
