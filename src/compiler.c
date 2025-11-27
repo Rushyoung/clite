@@ -39,7 +39,6 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
         fprintf(stderr, "Invalid bytecode range: %zu to %zu\n", bt_start, bt_end);
         exit(EXIT_FAILURE);
     }
-    printf("Compiling bytecode from %zu to %zu\n", bt_start, bt_end);
     uint8_t*  jit = fun; // Save the start of the allocated memory
     uint64_t* pc = ctx->btcode + bt_start;
     uint64_t* end = ctx->btcode + bt_end;

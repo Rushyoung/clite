@@ -38,7 +38,7 @@ void DumpToken(context_t ctx, token_t tk) {
             printf("len: %d, value: %.*s", tk.len, tk.len, tk.name);
             break;
         case TK_STR:
-            printf("len: %d, value: \"%.*s\"", tk.len, tk.len, ctx->heap + tk.val.uval);
+            printf("len: %d, value: \"%.*s\"", tk.len, tk.len, tk.name);
             break;
     }
     printf("\n");
