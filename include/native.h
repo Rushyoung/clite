@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#include "opcode.h"
-
 #define NativeFunctionArgs uint64_t *bp, uint64_t arity
 
 typedef uint64_t (*NativeFn)(NativeFunctionArgs);
