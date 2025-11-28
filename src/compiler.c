@@ -2,7 +2,6 @@
 
 #include "opcode.h"
 
-#include <corecrt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32

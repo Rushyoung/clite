@@ -418,30 +418,17 @@ static void expr_variable(ParseFunctionArgs) {
 
 static void expr_sizeof(ParseFunctionArgs) { // to fix bug
     emit(ctx, OP_IMM);
+    uint64_t* btcode_here = ctx->btcode_cur;
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'sizeof'");
-    if(match(ctx, sc, TK_ID)){
-        token_t* id = SymFind(ctx, prev(sc));
-        if(id->klass == 0) {
-            raise(sc->line, "Identifier not declared before use");
-        }
-        if(id->klass == TK_FUN){
-            emit(ctx, 8);
-        } else {
-            emit(ctx, (id->type == TYPE_VOID || id->type == TYPE_CHAR) ? 1 : 8); // 函数或指针类型为 8 字节，其他类型为 1 字节
-        }
-    } else {
-        expect(ctx, sc, TK_INT, "Expected type after 'sizeof'");
-        int type = TYPE_VOID; // 解析类型 @todo
-        if(type == TYPE_VOID) {
-            raise(sc->line, "Cannot use sizeof on void type");
-        }
-        emit(ctx, (type == TYPE_CHAR || type == TYPE_VOID) ? 1 : 8); // char 和 void 类型为 1 字节，其他类型为 8 字节
-    }
+    parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'sizeof' expression");
+    ctx->btcode_cur = btcode_here; // 回到 sizeof 位置重新解析
+    emit(ctx, (ctx->expr_type == TYPE_CHAR || ctx->expr_type == TYPE_VOID) ? 1 : 8);
 }
 
 // 解析函数调用表达式
 static void expr_call(ParseFunctionArgs) {
+    int return_type = ctx->expr_type;
     emit(ctx, OP_PUSH);
     emit(ctx, OP_PUSH); // 至少需要栈的两个位置
     int arg_count = 0;  // 函数参数计数
@@ -455,6 +442,7 @@ static void expr_call(ParseFunctionArgs) {
     }
     emit(ctx, OP_CALL);     // 生成函数调用指令
     emit(ctx, arg_count);   // 使用参数计数
+    ctx->expr_type = return_type; // 设置表达式类型为函数返回类型
 }
 
 // 解析数组下标/偏移量表达式
@@ -599,6 +587,12 @@ static void stmt_decl(ParseFunctionArgs) {
         } else {
             emit(ctx, OP_IMM);
             emit(ctx, 0);
+            if(real_type == TYPE_FLOAT) {
+                emit(ctx, OP_FLT);
+            }
+        }
+        if(id->type != ctx->expr_type && (id->type == TYPE_FLOAT || ctx->expr_type == TYPE_FLOAT)) {
+            raise(sc->line, "Cannot assign between float and int directly");
         }
         emit(ctx, OP_PUSH);
     }while(match(ctx, sc, TK_COMMA));

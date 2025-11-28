@@ -60,16 +60,36 @@ uint64_t lite_printf(NativeFunctionArgs) {
 }
 
 
-uint64_t lite_input(NativeFunctionArgs) {
-    assert(arity == 1, "lite_input requires 1 argument");
+uint64_t lite_fgets(NativeFunctionArgs) {
+    assert(arity == 3, "lite_fgets requires 3 arguments");
     char *buffer = (char *)(bp[0]);
-    ssize_t bytes_read = read(STDIN_FILENO, buffer, 1024);
-    if (bytes_read < 0) {
-        perror("read");
-        exit(EXIT_FAILURE);
+    int size = (int)(bp[1]);
+    int fd = (int)(bp[2]);
+    if(size < 0){
+        return 0;
     }
-    buffer[bytes_read - 1] = '\0'; // null-terminate the string
-    return (uint64_t)bytes_read; // return number of bytes read
+    if(fd == 0) {
+        return (uint64_t)fgets(buffer, size, stdin);
+    }
+    int i = 0;
+    char c;
+    ssize_t ret;
+    while (i < size - 1) {
+        ret = read(fd, &c, 1);
+        if (ret == 1) {
+            buffer[i++] = c;
+            if (c == '\n') { // 读到换行符就停止
+                break;
+            }
+        } else if (ret == 0) { // EOF
+            if (i == 0) return 0; // 如果还没读到任何东西就 EOF，返回 NULL
+            break; // 如果读了一部分遇到 EOF，结束循环返回已读内容
+        } else {
+            return 0; // 读取错误
+        }
+    }
+    buffer[i] = '\0'; // 补上字符串结束符
+    return bp[0];
 }
 
 

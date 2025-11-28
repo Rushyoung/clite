@@ -22,6 +22,18 @@ int main(){
     day = now / (24 * 3600);
     now = now % (24 * 3600);
     hour = now / 3600 + 8; // Adjusting for UTC+8 timezone
+    if(hour >= 24){
+        hour = hour - 24;
+        day = day + 1;
+        if(day >= month_days[month]){
+            day = 0;
+            month = month + 1;
+            if(month >= 12){
+                month = 0;
+                year = year + 1;
+            }
+        }
+    }
     now = now % 3600;
     minute = now / 60;
     second = now % 60;

@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include <winnt.h>
-
 
 int main() {
     // 九九乘法表

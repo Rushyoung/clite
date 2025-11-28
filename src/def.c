@@ -31,9 +31,9 @@ context_t InitContext(){
 
     char* builtin =
     "break char continue do else enum for if int return sizeof static while void "
-    "float double main open read close printf input malloc "
+    "float double main open read close printf fgets malloc "
     "free memset memcmp exit time sleep rand __builtin_sp "
-    "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX __VERSION__";
+    "EXIT_SUCCESS EXIT_FAILURE NULL EOF RAND_MAX stdin __VERSION__";
     scanner keyword = InitScanner(strlen(builtin), builtin);
 
     for(int ids = TK_BREAK; ids <= TK_FLOAT; ids++){
@@ -48,7 +48,7 @@ context_t InitContext(){
     ctx->main_id = ctx->sym_idx - 1;          // store main function index
 
     NativeFn native_functions[] = {
-        lite_open, lite_read, lite_close, lite_printf, lite_input,
+        lite_open, lite_read, lite_close, lite_printf, lite_fgets,
         lite_malloc, lite_free, lite_memset, lite_memcmp, lite_exit,
         lite_time, lite_sleep, lite_rand, lite_debug_sp
     };
@@ -61,7 +61,7 @@ context_t InitContext(){
     }
 
     uint64_t constants[] = {
-        EXIT_SUCCESS, EXIT_FAILURE, (uint64_t)NULL, EOF, RAND_MAX, (uint64_t)ctx->heap
+        EXIT_SUCCESS, EXIT_FAILURE, (uint64_t)NULL, EOF, RAND_MAX, 0, (uint64_t)ctx->heap
     };
     for(int ids = 0; ids < 6; ids++){
         next(keyword, ctx);
