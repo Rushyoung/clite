@@ -44,8 +44,8 @@ context_t InitContext(){
     ctx->sym[ctx->sym_idx - 1].tk = TK_FLOAT; // double is as same as float type identifier
 
     next(keyword, ctx);
-    ctx->sym[ctx->sym_idx - 1].tk = TK_ID;    // main function identifier
     ctx->main_id = ctx->sym_idx - 1;          // store main function index
+    ctx->sym[ctx->main_id].tk = TK_ID;        // main function identifier
 
     NativeFn native_functions[] = {
         lite_open, lite_read, lite_close, lite_printf, lite_fgets,
