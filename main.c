@@ -59,8 +59,13 @@ int main(int argc, char *argv[]){
     if(__args__.bytecode){
         DumpBtcode(ctx);
     }
-    if(!__args__.compile_only){
-        run(ctx);
+    if(__args__.compile_only){
+        return 0;
+    }
+    if(__args__.debug){
+        trace(ctx);
+    } else {
+        eval(ctx);
     }
     return 0;
 }

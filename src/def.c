@@ -201,6 +201,7 @@ void InitArgs(int argc, char* argv[]){
     __args__.inputs = NULL;
     __args__.symboltable = 0;
     __args__.compile_only = 0;
+    __args__.optimize = 0;
 
     for(int i = 1; i < argc; i++){
         if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "-?") == 0){
@@ -210,8 +211,9 @@ void InitArgs(int argc, char* argv[]){
             printf("  -c, --compile       Compile only, do not run\n");
             printf("  -d, --debug         Enable debug mode\n");
             printf("  -h, --help          Show this help message\n");
-            printf("  -t, --tokenization  Show the tokenization result\n");
+            printf("  -O, --optimize      Take further optimization\n");
             printf("  -s, --symboltable   Show the symbol table\n");
+            printf("  -t, --tokenization  Show the tokenization result\n");
             exit(EXIT_SUCCESS);
         }
         if(strcmp(argv[i], "--debug") == 0 || strcmp(argv[i], "-d") == 0){
@@ -224,6 +226,8 @@ void InitArgs(int argc, char* argv[]){
             __args__.compile_only = 1;
         } else if(strcmp(argv[i], "--tokenization") == 0 || strcmp(argv[i], "-t") == 0){
             __args__.tokenization = 1;
+        } else if(strcmp(argv[i], "--optimize") == 0 || strcmp(argv[i], "-O") == 0){
+            __args__.optimize = 1;
         } else if(__args__.inputs == NULL){
             __args__.inputs = argv[i];
         } else {

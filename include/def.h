@@ -45,6 +45,7 @@ struct _args_t{
     int symboltable;
     int compile_only;
     int tokenization;
+    int optimize;
     char* inputs;
 };
 

@@ -3,6 +3,10 @@
 
 #include "def.h"
 
-void run(context_t ctx);
+// for debug trace
+void trace(context_t ctx);
+
+// for quicker running
+void eval(context_t ctx);
 
 #endif//__RUNNER_H__

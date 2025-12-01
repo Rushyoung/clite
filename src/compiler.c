@@ -54,6 +54,9 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
         }
         switch (ip) {
             case OP_FUNC:
+                emit_a(0x53); // push rbx
+                emit_a(0x56); // push rsi
+                emit_a(0x57); // push rdi
                 emit_a(0x48); emit_a(0x89); emit_a(0xCF); // mov RDI, RCX; RDI 是基址bp
                 emit_a(0x48); emit_a(0x89); emit_a(0xFE); // mov RSI, RDI; RSI 是栈顶sp
                 emit_a(0x48); emit_a(0x8D); emit_a(0x34); emit_a(0xD6); // lea RSI, [RSI + RDX * 8]; RDX 是参数个数
@@ -208,6 +211,9 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 pc++;
                 break;
             case OP_RET:
+                emit_a(0x5F); // pop rdi
+                emit_a(0x5E); // pop rsi
+                emit_a(0x5B); // pop rbx
                 emit_a(0xC3); // ret
                 break;
             case OP_FLT:
