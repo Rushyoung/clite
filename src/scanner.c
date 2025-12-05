@@ -279,7 +279,6 @@ token_t prev(scanner sc){
     return sc->prv;
 }
 
-
 scanner InitScanner(size_t size, char* src){
     scanner sc = malloc(sizeof(struct _scanner));
     sc->size = size;

@@ -4,11 +4,11 @@
 
 #include "def.h"
 #include "debug.h"
+#include "optimizer.h"
+
 #include "parser.h"
-
-#include "scanner.h"
 #include "runner.h"
-
+#include "scanner.h"
 
 char* load(const char* file_name, size_t* file_size){
     FILE* file = fopen(file_name, "rb");
@@ -45,14 +45,15 @@ int main(int argc, char *argv[]){
 
     size_t file_size = 0;
     char*  file_code = load(__args__.inputs, &file_size);
-
     if(__args__.tokenization){
+        /// @bug: memory leak here
         DumpScanner(InitScanner(file_size, file_code));
     }
-
     context_t ctx = InitContext();
     scanner sc = InitScanner(file_size, file_code);
     parse(ctx, sc);
+    free(sc);
+    free(file_code);
     if(__args__.symboltable){
         DumpSymbol(ctx);
     }
@@ -61,6 +62,9 @@ int main(int argc, char *argv[]){
     }
     if(__args__.compile_only){
         return 0;
+    }
+    if(__args__.optimize){
+        optimize(ctx);
     }
     if(__args__.debug){
         trace(ctx);

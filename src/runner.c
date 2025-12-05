@@ -76,6 +76,7 @@ void trace(context_t ctx){
                 break;
             case OP_EXIT:
                 free(stk);
+                FreeContext(ctx);
                 exit((int)ax.ival);
                 break;
             case OP_JMP:
@@ -312,6 +313,7 @@ void eval(context_t ctx){
         DISPATCH();
     L_OP_EXIT:
         free(stk);
+        FreeContext(ctx);
         exit((int)ax.ival);
         DISPATCH();
     L_OP_JMP:
