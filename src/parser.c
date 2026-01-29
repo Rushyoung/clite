@@ -418,8 +418,17 @@ static void expr_variable(ParseFunctionArgs) {
 
 static void expr_sizeof(ParseFunctionArgs) { // to fix bug
     emit(ctx, OP_IMM);
-    uint64_t* btcode_here = ctx->btcode_cur;
     expect(ctx, sc, TK_LE_PAREN, "Expected '(' after 'sizeof'");
+    if(match_type(ctx, sc)) {
+        int type = ctx->expr_type;
+        while(match(ctx, sc, TK_MUL)) {
+            type += TYPE_PTR; // 处理指针类型
+        }
+        expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'sizeof' type");
+        emit(ctx, (type == TYPE_CHAR || type == TYPE_VOID) ? 1 : 8);
+        return;
+    }
+    uint64_t* btcode_here = ctx->btcode_cur;
     parse_expr(ctx, sc, PREC_ASSIGNMENT);
     expect(ctx, sc, TK_RI_PAREN, "Expected ')' after 'sizeof' expression");
     ctx->btcode_cur = btcode_here; // 回到 sizeof 位置重新解析
