@@ -128,7 +128,7 @@ static void expect(context_t ctx, scanner sc, TkType tk, char* msg) {
 }
 
 // 解析标识符，并处理指针类型
-static token_t* __identifier(context_t ctx, scanner sc, int* type) {
+static token_t* identifier(context_t ctx, scanner sc, int* type) {
     while(match(ctx, sc, TK_MUL)) {
         *type += TYPE_PTR; // 处理指针类型
     }
@@ -579,7 +579,7 @@ static void stmt_decl(ParseFunctionArgs) {
     int base_type = ctx->expr_type;
     do{
         int real_type = base_type;
-        token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
+        token_t* id = identifier(ctx, sc, &real_type); // 解析标识符
         if(id->klass == TK_LOC) {
             raise(sc->line, "Variable '%.*s' already defined", id->len, id->name);
         } else if(id->klass == TK_GLO || id->klass == TK_FUN || id->klass == TK_SYS) {
@@ -788,7 +788,7 @@ static void parse_function(context_t ctx, scanner sc, token_t* name, int need_ji
             raise(sc->line, "Expected type declaration for function argument");
         }
         int arg_type = ctx->expr_type; // 解析参数类型
-        token_t* arg_id = __identifier(ctx, sc, &arg_type); // 解析参数标识符
+        token_t* arg_id = identifier(ctx, sc, &arg_type); // 解析参数标识符
         if(arg_id->klass == TK_LOC) {
             raise(sc->line, "Function argument '%.*s' already defined in this scope", arg_id->len, arg_id->name);
         } else if(arg_id->klass == TK_GLO || arg_id->klass == TK_FUN) {
@@ -835,7 +835,7 @@ static void parse_global(context_t ctx, scanner sc) {
     }
     int base_type = ctx->expr_type; // 基本类型
     int real_type = ctx->expr_type; // 实际类型
-    token_t* id = __identifier(ctx, sc, &real_type); // 解析标识符
+    token_t* id = identifier(ctx, sc, &real_type); // 解析标识符
     if(id->klass == TK_GLO || id->klass == TK_FUN) {
         raise(sc->line, "Global variable '%.*s' already defined", id->len, id->name);
     }
@@ -861,7 +861,7 @@ static void parse_global(context_t ctx, scanner sc) {
         raise(sc->line, "Expected ',' or ';' after global variable declaration");
     }
     real_type = base_type;
-    id = __identifier(ctx, sc, &real_type); // 继续解析下一个标识符
+    id = identifier(ctx, sc, &real_type); // 继续解析下一个标识符
     if(id->klass == TK_GLO || id->klass == TK_FUN) {
         raise(sc->line, "Global variable '%.*s' already defined", id->len, id->name);
     }
