@@ -3,7 +3,6 @@
 #include "native.h"
 #include "opcode.h"
 
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
@@ -24,7 +23,7 @@
 #define JIT_SIZE 65535
 
 void* jitalloc() {
-    #ifdef _WIN32
+#ifdef _WIN32
     void* mem = VirtualAlloc(NULL, JIT_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!mem) { fprintf(stderr, "VirtualAlloc failed\n"); exit(1); }
 #else

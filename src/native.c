@@ -20,10 +20,7 @@ uint64_t lite_open(NativeFunctionArgs) {
     char *filename = (char *)(bp[0]);
     int flags = (int)(bp[1]);
     int fd = open(filename, flags);
-    if (fd < 0) {
-        perror("open");
-        exit(EXIT_FAILURE);
-    }
+    assert(fd >= 0, "open() failed to open file");
     return fd;
 }
 
@@ -34,10 +31,7 @@ uint64_t lite_read(NativeFunctionArgs) {
     char *buffer = (char *)(bp[1]);
     uint32_t size = (uint32_t)(bp[2]);
     ssize_t bytes_read = read(fd, buffer, size);
-    if (bytes_read < 0) {
-        perror("read");
-        exit(EXIT_FAILURE);
-    }
+    assert(bytes_read >= 0, "read() failed");
     return bytes_read;
 }
 
@@ -45,10 +39,7 @@ uint64_t lite_read(NativeFunctionArgs) {
 uint64_t lite_close(NativeFunctionArgs) {
     assert(arity == 1, "lite_close requires 1 argument");
     int fd = (int)(bp[0]);
-    if (close(fd) < 0) {
-        perror("close");
-        exit(EXIT_FAILURE);
-    }
+    assert(close(fd) == 0, "close() failed");
     return 0;
 }
 
@@ -97,10 +88,7 @@ uint64_t lite_malloc(NativeFunctionArgs) {
     assert(arity == 1, "lite_malloc requires 1 argument");
     size_t size = (size_t)(bp[0]);
     void *ptr = malloc(size);
-    if (!ptr) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
+    assert(ptr != NULL, "malloc() failed");
     return (uint64_t)ptr;
 }
 
@@ -149,20 +137,14 @@ uint64_t lite_time(NativeFunctionArgs) {
 uint64_t lite_sleep(NativeFunctionArgs) {
     assert(arity == 1, "lite_sleep requires 1 argument");
     int seconds = (int)(bp[0]);
-    if (seconds < 0) {
-        fprintf(stderr, "lite_sleep requires non-negative argument\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(seconds >= 0, "sleep() requires non-negative argument");
     sleep(seconds);
     return 0;
 }
 
 
 uint64_t lite_rand(NativeFunctionArgs) {
-    if (arity != 0) {
-        fprintf(stderr, "lite_rand requires no arguments\n");
-        exit(EXIT_FAILURE);
-    }
+    assert(arity == 0, "rand() requires 0 arguments");
     return (uint64_t)(rand());
 }
 
@@ -176,10 +158,7 @@ uint64_t lite_debug_sp(NativeFunctionArgs) {
 
 uint64_t buildin_list(NativeFunctionArgs) {
     uint64_t *list = malloc(arity * sizeof(uint64_t));
-    if (!list) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
+    assert(list != NULL, "Failed to allocate memory for list");
     if(builtin_gc(list, GC_REGISTER_PTR) == 1){ // register the list for GC
         builtin_gc(bp, GC_CLEAR); // perform GC if registration fails
         assert(builtin_gc(list, GC_REGISTER_PTR) == 0, "Failed to register pointer after GC");
