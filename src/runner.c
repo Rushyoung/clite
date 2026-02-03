@@ -21,6 +21,7 @@ void trace(context_t ctx){
         fprintf(stderr, "Failed to allocate memory for stack\n");
         exit(EXIT_FAILURE);
     }
+    builtin_gc_init(stk, -1);
     const int print_header = __args__.debug && __args__.optimize != 1;
     for(ip = *pc; ip != 0; ip = *pc){
         pc++;
@@ -57,6 +58,9 @@ void trace(context_t ctx){
                 ax.uval = *sp;
                 break;
             case OP_FUNC: // 函数入口标记，什么都不做
+                break;
+            case OP_GC:
+                builtin_gc_clear(sp, -1);
                 break;
             case OP_CALL:
                 ax.uval = *(sp - *pc - 1);                               // 获取函数地址
@@ -294,6 +298,9 @@ void eval(context_t ctx){
         ax.uval = *sp;
         DISPATCH();
     L_OP_FUNC: // 函数入口标记，什么都不做
+        DISPATCH();
+    L_OP_GC:
+        builtin_gc_clear(sp, -1);
         DISPATCH();
     L_OP_CALL:
         ax.uval = *(sp - *pc - 1);                               // 获取函数地址

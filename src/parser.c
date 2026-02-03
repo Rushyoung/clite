@@ -504,6 +504,7 @@ static void expr_list(ParseFunctionArgs) {
     emit(ctx, OP_CALL);
     emit(ctx, member_count); // 使用成员计数
     ctx->expr_type = TYPE_INT + TYPE_PTR; // 列表类型为 int* (指针类型)
+    emit(ctx, OP_GC);
 }
 
 // 根据优先级解析表达式

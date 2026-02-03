@@ -180,8 +180,83 @@ uint64_t buildin_list(NativeFunctionArgs) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
+    if(builtin_gc(list, GC_REGISTER_PTR) == 1){ // register the list for GC
+        builtin_gc(bp, GC_CLEAR); // perform GC if registration fails
+        assert(builtin_gc(list, GC_REGISTER_PTR) == 0, "Failed to register pointer after GC");
+    }
     for (uint64_t i = 0; i < arity; i++) {
         list[i] = bp[i];
     }
     return (uint64_t)list; // return pointer to the list
+}
+
+
+uint64_t builtin_gc(NativeFunctionArgs) {
+    static uint64_t* stk = NULL;
+    static uint64_t** ptrs = NULL;
+    static size_t reg = 0;
+    switch(arity){
+        case GC_INIT: // init all static variables
+            assert(stk == NULL, "GC already initialized");
+            stk = bp;
+            ptrs = malloc(1024 * sizeof(uint64_t*));
+            for(size_t i = 0; i < 1024; i++){
+                ptrs[i] = NULL;
+            }
+            reg = 0;
+            assert(ptrs != NULL, "Failed to allocate memory for GC pointers");
+            return 0;
+        case GC_CLEAR: { // perform garbage collection
+            assert(stk != NULL, "GC has not initialized");
+            size_t new_reg = 0;
+            for(size_t idx = 0; idx < reg; idx++){
+                uint64_t* ptr = ptrs[idx];
+                if(ptr == NULL){
+                    continue; // skip null pointers
+                }
+                int found = 0;
+                for(uint64_t* p = stk; p < bp; p++){
+                    if(*p == (uint64_t)ptr){
+                        found = 1;
+                        break;
+                    }
+                }
+                if(!found){
+                    free(ptr);
+                    ptrs[idx] = NULL; // clear the pointer after freeing
+                } else {
+                    ptrs[new_reg++] = ptr; // keep the pointer if it's still referenced
+                }
+            }
+            reg = new_reg; // update the register count after GC
+            return 0;
+        }
+        case GC_REGISTER_PTR: // register a pointer for GC
+            assert(stk != NULL, "GC not initialized");
+            if(reg >= 1024){
+                return 1;
+            }
+            ptrs[reg] = bp;
+            reg++;
+            return 0;
+    }
+}
+
+
+uint64_t builtin_gc_init(NativeFunctionArgs) {
+    assert(arity == -1, "builtin_gc_init can only be used during runner startup, and should be called by hand.");
+    builtin_gc(bp, GC_INIT);
+    return 0;
+}
+
+
+uint64_t builtin_gc_clear(NativeFunctionArgs) {
+    assert(arity == -1, "builtin_gc_clear can only be called by hard-coded in the bytecode.");
+    static uint64_t called_time = 0;
+    called_time++;
+    if(called_time >= 100){
+        called_time = 0;
+        builtin_gc(bp, GC_CLEAR); // perform GC every 100 calls
+    }
+    return 0;
 }

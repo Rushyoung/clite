@@ -1,7 +1,9 @@
 #include "compiler.h"
 
+#include "native.h"
 #include "opcode.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
@@ -190,6 +192,20 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x85); emit_a(0xC0); // test RAX, RAX
                 emit_a(0x0F); emit_a(0x94); emit_a(0xC0); // sete AL
                 emit_a(0x0F); emit_a(0xB6); emit_a(0xC0); // movzx RAX, AL
+                break;
+            case OP_GC:
+                emit_a(0x50); // push RAX // 保存返回值
+                emit_a(0x57); // push RDI // 保存基址bp
+                emit_a(0x56); // push RSI // 保存栈顶sp
+                emit_a(0x48); emit_a(0x83); emit_a(0xEC); emit_a(0x20);// sub rsp, 32 // 对齐32字节栈空间
+                emit_a(0x48); emit_a(0x89); emit_a(0xF1); // mov RCX, RSI
+                emit_a(0x48); emit_a(0xC7); emit_a(0xC2); emit_e(-1); // mov RDX, -1 // 参数2: -1
+                emit_a(0x48); emit_a(0xB8); emit_i((uint64_t)builtin_gc_clear); // mov RAX, builtin_gc_clear address
+                emit_a(0xFF); emit_a(0xD0); // call RAX
+                emit_a(0x48); emit_a(0x83); emit_a(0xC4); emit_a(0x20); // add rsp, 32
+                emit_a(0x5E); // pop RSI // 恢复栈顶sp
+                emit_a(0x5F); // pop RDI // 恢复基址bp
+                emit_a(0x58); // pop RAX // 恢复返回值
                 break;
             case OP_CALL:
                 emit_a(0x57); // push RDI // 保存基址bp

@@ -25,5 +25,13 @@ uint64_t lite_debug_sp(NativeFunctionArgs);
 
 uint64_t buildin_list(NativeFunctionArgs);  // just use in bytecode
 
+enum {
+    GC_INIT,
+    GC_CLEAR,
+    GC_REGISTER_PTR,
+};
+uint64_t builtin_gc(NativeFunctionArgs); // the gc core function
+uint64_t builtin_gc_init(NativeFunctionArgs); // use in the runner startup
+uint64_t builtin_gc_clear(NativeFunctionArgs); // use in the OP_GC
 
 #endif//__NATIVE_H__
