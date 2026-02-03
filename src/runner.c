@@ -21,7 +21,8 @@ void trace(context_t ctx){
         fprintf(stderr, "Failed to allocate memory for stack\n");
         exit(EXIT_FAILURE);
     }
-    builtin_gc_init(stk, -1);
+    builtin_gc_register(stk, GC_STACK);
+    builtin_gc_register((uint64_t*)ctx, GC_CONTEXT);
     const int print_header = __args__.debug && __args__.optimize != 1;
     for(ip = *pc; ip != 0; ip = *pc){
         pc++;
@@ -60,7 +61,7 @@ void trace(context_t ctx){
             case OP_FUNC: // 函数入口标记，什么都不做
                 break;
             case OP_GC:
-                builtin_gc_clear(sp, -1);
+                builtin_gc_clear(sp, ax.uval);
                 break;
             case OP_CALL:
                 ax.uval = *(sp - *pc - 1);                               // 获取函数地址
@@ -261,6 +262,8 @@ void eval(context_t ctx){
         fprintf(stderr, "Failed to allocate memory for stack\n");
         exit(EXIT_FAILURE);
     }
+    builtin_gc_register(stk, GC_STACK);
+    builtin_gc_register((uint64_t*)ctx, GC_CONTEXT);
     static void* dispatch_table[] = {
         &&L_OP_ZERO, // 手动处理 OP_ZERO (值为0)
         #define OPCODE(name, desc) &&L_##name,
@@ -300,7 +303,7 @@ void eval(context_t ctx){
     L_OP_FUNC: // 函数入口标记，什么都不做
         DISPATCH();
     L_OP_GC:
-        builtin_gc_clear(sp, -1);
+        builtin_gc_clear(sp, ax.uval);
         DISPATCH();
     L_OP_CALL:
         ax.uval = *(sp - *pc - 1);                               // 获取函数地址

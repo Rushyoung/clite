@@ -1,5 +1,9 @@
 #include "native.h"
 
+#include "def.h"
+#include "opcode.h"
+#include "token.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -171,22 +175,24 @@ uint64_t buildin_list(NativeFunctionArgs) {
 
 
 uint64_t builtin_gc(NativeFunctionArgs) {
+    static int is_initialized = 0;
     static uint64_t* stk = NULL;
+    static context_t ctx = NULL;
     static uint64_t** ptrs = NULL;
     static size_t reg = 0;
     switch(arity){
-        case GC_INIT: // init all static variables
-            assert(stk == NULL, "GC already initialized");
+        case GC_STACK: // init all static variables
+            assert(stk == NULL, "GC stk already initialized");
             stk = bp;
-            ptrs = malloc(1024 * sizeof(uint64_t*));
-            for(size_t i = 0; i < 1024; i++){
-                ptrs[i] = NULL;
-            }
-            reg = 0;
-            assert(ptrs != NULL, "Failed to allocate memory for GC pointers");
-            return 0;
+            break;
+        case GC_CONTEXT: // set context pointer
+            assert(ctx == NULL, "GC context already initialized");
+            ctx = (context_t)bp;
+            break;
         case GC_CLEAR: { // perform garbage collection
-            assert(stk != NULL, "GC has not initialized");
+            assert(is_initialized, "GC has not initialized");
+            uint64_t* true_bp = bp[0]; // get the real base pointer
+            uint64_t  ax = bp[1]; // get the ax register value
             size_t new_reg = 0;
             for(size_t idx = 0; idx < reg; idx++){
                 uint64_t* ptr = ptrs[idx];
@@ -194,8 +200,18 @@ uint64_t builtin_gc(NativeFunctionArgs) {
                     continue; // skip null pointers
                 }
                 int found = 0;
-                for(uint64_t* p = stk; p < bp; p++){
+                if((uint64_t)ptr == ax){
+                    found = 1;
+                }
+                for(uint64_t* p = stk; !found && p < true_bp; p++){
                     if(*p == (uint64_t)ptr){
+                        found = 1;
+                        break;
+                    }
+                }
+                for(size_t sym_idx = 0; !found && sym_idx < ctx->sym_idx; sym_idx++){
+                    token_t* sym_cur = ctx->sym + sym_idx;
+                    if(sym_cur->type >= TYPE_PTR && sym_cur->val.pval == ptr){
                         found = 1;
                         break;
                     }
@@ -211,7 +227,7 @@ uint64_t builtin_gc(NativeFunctionArgs) {
             return 0;
         }
         case GC_REGISTER_PTR: // register a pointer for GC
-            assert(stk != NULL, "GC not initialized");
+            assert(is_initialized, "GC has not initialized");
             if(reg >= 1024){
                 return 1;
             }
@@ -219,23 +235,31 @@ uint64_t builtin_gc(NativeFunctionArgs) {
             reg++;
             return 0;
     }
+    if(stk != NULL && ctx != NULL){
+        ptrs = malloc(1024 * sizeof(uint64_t*));
+        assert(ptrs != NULL, "Failed to allocate memory for GC pointers");
+        memset(ptrs, 0, 1024 * sizeof(uint64_t*));
+        is_initialized = 1;
+    }
+    return 0;
 }
 
 
-uint64_t builtin_gc_init(NativeFunctionArgs) {
-    assert(arity == -1, "builtin_gc_init can only be used during runner startup, and should be called by hand.");
-    builtin_gc(bp, GC_INIT);
+uint64_t builtin_gc_register(NativeFunctionArgs) {
+    assert(arity == GC_STACK || arity == GC_CONTEXT,
+        "builtin_gc_register can only be called by hard-coded in the runner.");
+    builtin_gc(bp, arity);
     return 0;
 }
 
 
 uint64_t builtin_gc_clear(NativeFunctionArgs) {
-    assert(arity == -1, "builtin_gc_clear can only be called by hard-coded in the bytecode.");
     static uint64_t called_time = 0;
     called_time++;
     if(called_time >= 100){
         called_time = 0;
-        builtin_gc(bp, GC_CLEAR); // perform GC every 100 calls
+        uint64_t args[] = {bp, arity};
+        builtin_gc(args, GC_CLEAR); // perform GC every 100 calls
     }
     return 0;
 }
