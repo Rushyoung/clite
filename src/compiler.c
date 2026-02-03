@@ -192,9 +192,9 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x0F); emit_a(0xB6); emit_a(0xC0); // movzx RAX, AL
                 break;
             case OP_CALL:
-                emit_a(0x48); emit_a(0x83); emit_a(0xEC); emit_a(0x28); // sub rsp, 40 // 对齐40字节栈空间
                 emit_a(0x57); // push RDI // 保存基址bp
                 emit_a(0x56); // push RSI // 保存栈顶sp
+                emit_a(0x48); emit_a(0x83); emit_a(0xEC); emit_a(0x28); // sub rsp, 40 // 对齐40字节栈空间
                 emit_a(0x49); emit_a(0xBA); emit_i(*pc); // mov R10, argc(imm64)
                 emit_a(0x48); emit_a(0x89); emit_a(0xF1); // mov RCX, RSI
                 emit_a(0x4C); emit_a(0x89); emit_a(0xD2); // mov RDX, R10
@@ -203,9 +203,9 @@ void compile(context_t ctx, uint8_t* fun, size_t bt_start, size_t bt_end) {
                 emit_a(0x48); emit_a(0x8B); emit_a(0x41); emit_a(0xF8); // mov RAX, [RCX-8]
                 emit_a(0x4C); emit_a(0x89); emit_a(0xD2); // mov RDX, R10
                 emit_a(0xFF); emit_a(0xD0); // call RAX
+                emit_a(0x48); emit_a(0x83); emit_a(0xC4); emit_a(0x28); // add rsp, 40
                 emit_a(0x5E); // pop RSI // 恢复栈顶sp
                 emit_a(0x5F); // pop RDI // 恢复基址bp
-                emit_a(0x48); emit_a(0x83); emit_a(0xC4); emit_a(0x28); // add rsp, 40
                 emit_a(0x48); emit_a(0xC7); emit_a(0xC2); emit_e((*pc + 2) * 8); // mov RDX, 回退量 = (argc+2)*8
                 emit_a(0x48); emit_a(0x29); emit_a(0xD6); // sub RSI, RDX; 恢复虚拟栈指针
                 pc++;
