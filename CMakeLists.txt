@@ -5,13 +5,28 @@ project(clite LANGUAGES C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+# Enable Unity Build
+set(CMAKE_UNITY_BUILD ON)
+
 # Read version from VERSION.txt
 file(READ VERSION.txt VERSION_STRING)
 string(STRIP "${VERSION_STRING}" VERSION_STRING)
 
 # Set compiler flags
-if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+if(CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+    # Performance remains -O2
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-int-conversion -Wno-switch -O2")
+    
+    # Size optimizations
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -fno-ident -fno-asynchronous-unwind-tables")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections -s")
+    
+    # Enable Link Time Optimization (LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "TinyCC")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 else()
