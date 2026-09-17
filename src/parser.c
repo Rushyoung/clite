@@ -626,8 +626,11 @@ static void stmt_while(ParseFunctionArgs) {
     SymEndLoop(ctx);
     emit(ctx, OP_JMP);
     emit(ctx, addr_start - ctx->btcode);
-    patch(ctx, addr_end, ctx->btcode_cur - ctx->btcode);
-    patch_loop_jumps(ctx, addr_start, ctx->btcode_cur);
+    uint64_t* exit_addr = ctx->btcode_cur;
+    patch(ctx, addr_end, exit_addr - ctx->btcode);
+    emit(ctx, OP_ADJ); // 循环退出（含break）时清理循环体内声明的变量
+    emit(ctx, old_sym_idx - (ctx->sym_loc - ctx->sym));
+    patch_loop_jumps(ctx, addr_start, exit_addr);
 }
 
 // 解析 do-while 循环语句
@@ -647,7 +650,10 @@ static void stmt_dowhile(ParseFunctionArgs) {
     emit(ctx, OP_NOT);
     emit(ctx, OP_JZ);
     emit(ctx, addr_start - ctx->btcode);
-    patch_loop_jumps(ctx, addr_start, ctx->btcode_cur);
+    uint64_t* exit_addr = ctx->btcode_cur;
+    emit(ctx, OP_ADJ); // 循环退出（含break）时清理循环体内声明的变量
+    emit(ctx, old_sym_idx - (ctx->sym_loc - ctx->sym));
+    patch_loop_jumps(ctx, addr_start, exit_addr);
 }
 
 // 解析 for 循环语句
