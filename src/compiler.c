@@ -26,6 +26,11 @@ void* jitalloc() {
 #ifdef _WIN32
     void* mem = VirtualAlloc(NULL, JIT_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!mem) { fprintf(stderr, "VirtualAlloc failed\n"); exit(1); }
+#elif defined(__APPLE__)
+    // Apple Silicon 禁止匿名映射同时带 PROT_EXEC (W^X)，先以 RW 映射写入，再改为 RX 执行
+    void* mem = mmap(NULL, JIT_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_JIT, -1, 0);
+    if (mem == MAP_FAILED) { perror("mmap"); exit(1); }
+    if (mprotect(mem, JIT_SIZE, PROT_READ | PROT_EXEC) != 0) { perror("mprotect"); exit(1); }
 #else
     void* mem = mmap(NULL, JIT_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (mem == MAP_FAILED) { perror("mmap"); exit(1); }

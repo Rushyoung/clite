@@ -2,6 +2,7 @@
 #define __TOKEN_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define TOKEN(name, desc) name,
 typedef enum {
